@@ -186,6 +186,7 @@ jobs:
         done
         sudo chown -R 1000:1000 $(pwd)
         if [ ! -z "$packages" ]; then
+          sudo sed -i 's/\&>\s*\/dev\/stderr/>\&2/g' ./scripts/build/termux_step_update_alternatives.sh
           ./common-files/build-termux-docker.sh login ./build-package.sh -I $packages
         fi
     - name: Generate build artifacts
@@ -365,6 +366,7 @@ jobs:
         done
         sudo chown -R 1000:1000 $(pwd)
         if [ ! -z "$packages" ]; then
+          sudo sed -i 's/\&>\s*\/dev\/stderr/>\&2/g' ./scripts/build/termux_step_update_alternatives.sh
           ./common-files/build-termux-docker.sh login ./build-package.sh -I $packages
         fi
     - name: Clean up docker containers
