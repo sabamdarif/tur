@@ -43,7 +43,7 @@ jobs:
       fail-fast: false
     steps:
     - name: Clone repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1000
         path: ${{ github.workspace }}
@@ -186,6 +186,7 @@ jobs:
         done
         sudo chown -R 1000:1000 $(pwd)
         if [ ! -z "$packages" ]; then
+          sudo sed -i 's/\&>\s*\/dev\/stderr/>\&2/g' ./scripts/build/termux_step_update_alternatives.sh
           ./common-files/build-termux-docker.sh login ./build-package.sh -I $packages
         fi
     - name: Generate build artifacts
@@ -216,20 +217,23 @@ jobs:
         find debs -type f -name "*.deb" -exec sha256sum "{}" \; | sort -k2
     - name: Store *.deb files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: debs-${{ matrix.target_arch }}-${{ github.sha }}
         path: ./artifacts
+        include-hidden-files: true
+        overwrite: true
+        compression-level: 0
 
   build-arm:
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
         target_arch: [arm, aarch64]
       fail-fast: false
     steps:
     - name: Clone repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1000
         path: ${{ github.workspace }}
@@ -362,6 +366,7 @@ jobs:
         done
         sudo chown -R 1000:1000 $(pwd)
         if [ ! -z "$packages" ]; then
+          sudo sed -i 's/\&>\s*\/dev\/stderr/>\&2/g' ./scripts/build/termux_step_update_alternatives.sh
           ./common-files/build-termux-docker.sh login ./build-package.sh -I $packages
         fi
     - name: Clean up docker containers
@@ -397,10 +402,13 @@ jobs:
         find debs -type f -name "*.deb" -exec sha256sum "{}" \; | sort -k2
     - name: Store *.deb files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: debs-${{ matrix.target_arch }}-${{ github.sha }}
         path: ./artifacts
+        include-hidden-files: true
+        overwrite: true
+        compression-level: 0
     - name: Remove *.debs
       if: always()
       run: |
@@ -412,9 +420,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Clone repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Get *.deb files
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: ./
     - name: Upload to a temporary release

@@ -1,0 +1,10 @@
+.*-jumbo
+.*-jumbo-host-tools
+chromium-beta
+chromium-beta-host-tools
+code-server
+code-oss
+electron-headers-.*
+rustc-nightly
+python-polars
+tor-browser
