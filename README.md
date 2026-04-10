@@ -107,7 +107,7 @@ TUR also maintains some other git repos. These git repos are listed below.
 
 `dists`: It contains some scripts to publish APT repo, hosts the GitHub Pages, and holds deb files in its Releases.
 
-`termux-docker`: It is forked from [termux/termux-docker](https://github.com/termux/termux-docker). The original one contains some binaries and libraries which is targeting API 28, and the fork contains them which is targeting API 24.
+`termux-docker` **Archived**: It is forked from [termux/termux-docker](https://github.com/termux/termux-docker). The original one contains some binaries and libraries which is targeting API 28, and the fork contains them which is targeting API 24. It has been replaced with `ndk-multilib-native-stubs`, which directs `clang` to link to an API level 24 `libc.so` stub.
 
 `ndk-toolchain-gcc-9/10/11/12`: These repos contain some build scripts to build a NDK toolchain with GCC rather than LLVM.
 
