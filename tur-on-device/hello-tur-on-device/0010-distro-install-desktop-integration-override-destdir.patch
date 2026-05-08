@@ -1,0 +1,33 @@
+--- a/bin/distro-install-desktop-integration
++++ b/bin/distro-install-desktop-integration
+@@ -7,6 +7,8 @@ fi
+ 
+ PRODUCTVERSION_NODOT=`echo $PRODUCTVERSION | sed -e "s/\.//"`
+ 
++DESTDIR="@TERMUX_PREFIX@"
++
+ mkdir -p "$DESTDIR$BINDIR"
+ 
+ create_wrapper()
+@@ -127,7 +127,7 @@ if test -d $DESTDIR/opt ; then
+ fi
+ 
+ # we want non-versioned desktop files
+-cd $DESTDIR/$INSTALLDIR/share/xdg
++cd $INSTALLDIR/share/xdg
+ # we want non-versioned stuff in the distro packages
+ sed -i \
+     -e "s/\($INSTALLDIRNAME\)$PRODUCTVERSION_NODOT/\1/" \
+@@ -182,9 +182,9 @@ if test "$WITH_COMPAT_OOWRAPPERS" = "TRUE" ; then
+ fi
+ 
+ echo "Install $OOINSTDIR/basis$VERSION/program/java-set-classpath";
+-mkdir -p $DESTDIR$INSTALLDIR/program
+-sed -e "s|@INSTALLDIR@|$INSTALLDIR|g" "${SRCDIR?}"/bin/java-set-classpath.in >| "$DESTDIR$INSTALLDIR/program/java-set-classpath" || exit 1;
+-chmod 755 "$DESTDIR$INSTALLDIR/program/java-set-classpath"
++mkdir -p $INSTALLDIR/program
++sed -e "s|@INSTALLDIR@|$INSTALLDIR|g" "${SRCDIR?}"/bin/java-set-classpath.in >| "$INSTALLDIR/program/java-set-classpath" || exit 1;
++chmod 755 "$INSTALLDIR/program/java-set-classpath"
+ test -f $DESTDIR/gid_Module_Root_Brand && echo "$INSTALLDIR/program/java-set-classpath" >>$DESTDIR/gid_Module_Root_Brand
+ 
+ exit 0

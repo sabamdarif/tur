@@ -1,0 +1,22 @@
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index d4f087d58..16e721462 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -962,7 +962,7 @@ void handleCrashReport()
+ }
+ #endif
+ 
+-#if !defined __ANDROID__
++#if 1
+ void handleSafeMode()
+ {
+     const css::uno::Reference< css::uno::XComponentContext >& xContext = ::comphelper::getProcessComponentContext();
+@@ -2048,7 +2048,7 @@ void Desktop::OpenClients()
+     // need some time, where the user won't see any results and wait for finishing the office startup...
+     bool bAllowRecoveryAndSessionManagement = ( !rArgs.IsNoRestore() ) && ( !rArgs.IsHeadless()  );
+ 
+-#if !defined __ANDROID__
++#if 1
+     // Enter safe mode if requested
+     if (Application::IsSafeModeEnabled()) {
+         handleSafeMode();

@@ -1,0 +1,12 @@
+--- a/sal/osl/unx/file.cxx
++++ b/sal/osl/unx/file.cxx
+@@ -65,7 +65,8 @@
+ #include <vector>
+ #endif
+ 
+-#ifdef LINUX
++#include <sys/vfs.h>
++#if defined(LINUX) && !defined(__ANDROID__)
+ #include <sys/vfs.h>
+ // As documented by the kernel
+ constexpr decltype(std::declval<struct statfs>().f_type) SMB_SUPER_MAGIC = 0x517B;

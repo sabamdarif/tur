@@ -1,0 +1,65 @@
+libe-book has code that scrambles the C++ default namespace with a mixed-up C++ header include order;
+including cstdlib in these files is the simplest way to work around the problem
+
+error: no member named 'ldiv' in the global namespace; did you mean simply 'ldiv'?
+
+--- a/src/lib/EBOOKOPFToken.cpp
++++ b/src/lib/EBOOKOPFToken.cpp
+@@ -8,6 +8,7 @@
+  */
+ 
+ #include <cstring>
++#include <cstdlib>
+ 
+ #include "EBOOKOPFToken.h"
+ 
+--- a/src/lib/EBOOKHTMLToken.cpp
++++ b/src/lib/EBOOKHTMLToken.cpp
+@@ -8,6 +8,7 @@
+  */
+ 
+ #include <cstring>
++#include <cstdlib>
+ 
+ #include "EBOOKHTMLToken.h"
+ 
+--- a/src/lib/EPubToken.cpp
++++ b/src/lib/EPubToken.cpp
+@@ -8,6 +8,7 @@
+  */
+ 
+ #include <cstring>
++#include <cstdlib>
+ 
+ #include "EPubToken.h"
+ 
+--- a/src/lib/FictionBook2Token.cpp
++++ b/src/lib/FictionBook2Token.cpp
+@@ -8,6 +8,7 @@
+  */
+ 
+ #include <cstring>
++#include <cstdlib>
+ 
+ #include "FictionBook2Token.h"
+ 
+--- a/src/lib/FictionBook3Token.cpp
++++ b/src/lib/FictionBook3Token.cpp
+@@ -11,6 +11,7 @@
+ 
+ #include <cassert>
+ #include <cstring>
++#include <cstdlib>
+ 
+ #include "EBOOKTokenizer.h"
+ 
+--- a/src/lib/RocketEBookToken.cpp
++++ b/src/lib/RocketEBookToken.cpp
+@@ -8,6 +8,7 @@
+  */
+ 
+ #include <cstring>
++#include <cstdlib>
+ 
+ #include "RocketEBookToken.h"
+ 
