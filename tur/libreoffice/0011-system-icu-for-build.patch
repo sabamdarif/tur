@@ -1,0 +1,12 @@
+diff --git a/configure.ac b/configure.ac
+index e805fbf39..7d6647b70 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -6298,6 +6298,7 @@ if test "$cross_compiling" = "yes"; then
+         --without-webdav \
+         --without-x \
+         --with-system-curl \
++        --with-system-icu \
+ "
+     # single quotes added for better readability in case of spaces
+     echo "    Running CONF-FOR-BUILD/configure" \

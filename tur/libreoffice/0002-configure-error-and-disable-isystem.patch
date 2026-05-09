@@ -1,18 +1,10 @@
-From 8f05899b0b9ee8817ceec610589341a8b9cb3a4d Mon Sep 17 00:00:00 2001
-From: Ronald Y <knyipab@gmail.com>
-Date: Sun, 22 Sep 2024 09:21:18 +0800
-Subject: [PATCH 1/8] configure-error-and-disable-isystem
-
-Change-Id: I70125356c9306f442fd5c2ec8343b55019cd118b
----
- configure.ac | 27 ++++-----------------------
- 1 file changed, 4 insertions(+), 23 deletions(-)
-
+diff --git a/configure.ac b/configure.ac
+index a4921eba4..c36af7fc5 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -4058,26 +4058,7 @@ AC_SUBST(ENABLE_WASM_STRIP)
- AC_SUBST(ENABLE_WASM_STRIP_WRITER)
- AC_SUBST(ENABLE_WASM_STRIP_CALC)
+@@ -4386,26 +4386,7 @@ else
+ fi
+ AC_SUBST(ENABLE_EMSCRIPTEN_PROXY_POSIX_SOCKETS)
  
 -# Use -isystem (gcc) if possible, to avoid warnings in 3rd party headers.
 -# NOTE: must _not_ be used for bundled external libraries!
@@ -38,7 +30,7 @@ Change-Id: I70125356c9306f442fd5c2ec8343b55019cd118b
  
  dnl ===================================================================
  dnl  Check which Visual Studio compiler is used
-@@ -11304,7 +11285,7 @@ else
+@@ -12006,7 +11987,7 @@ else
          save_CXXFLAGS=$CXXFLAGS
          save_IFS=$IFS
          IFS=$P_SEP
@@ -47,7 +39,7 @@ Change-Id: I70125356c9306f442fd5c2ec8343b55019cd118b
              dnl Reset IFS as soon as possible, to avoid unexpected side effects (and the
              dnl "/usr/include" fallback makes sure we get here at least once; resetting rather than
              dnl unsetting follows the advice at <https://git.savannah.gnu.org/gitweb/?p=autoconf.git;
-@@ -12735,7 +12716,7 @@ elif test \( \( "$_os" = "Linux" -o "$_os" = "Darwin" \) -a "$ENABLE_NSS" = TRUE
+@@ -13489,7 +13470,7 @@ elif test \( \( "$_os" = "Linux" -o "$_os" = "Darwin" \) -a "$ENABLE_NSS" = TRUE
          SYSTEM_GPGMEPP=TRUE
  
          # C++ library doesn't come with fancy gpgmepp-config, check for headers the old-fashioned way
