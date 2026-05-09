@@ -18,7 +18,6 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --with-vendor=Termux
 --enable-split-app-modules
 --enable-release-build
-SYSBASE=$TERMUX_PREFIX
 
 --disable-avahi
 --enable-dbus
