@@ -21,6 +21,8 @@ termux_step_pre_configure() {
 	local _libgcc_path="$(dirname $_libgcc_file)"
 	local _libgcc_name="$(basename $_libgcc_file)"
 	LDFLAGS+=" -L$_libgcc_path -l:$_libgcc_name"
+
+	export boost_cv_lib_system=yes
 }
 
 termux_step_post_configure() {

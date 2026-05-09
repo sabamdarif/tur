@@ -3,6 +3,7 @@ TERMUX_PKG_DESCRIPTION="filter for old StarOffice documents(.sdc, .sdw, ...) bas
 TERMUX_PKG_LICENSE="LGPL-2.1"
 TERMUX_PKG_MAINTAINER="@termux-user-repository"
 TERMUX_PKG_VERSION=0.0.7
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_SRCURL=https://github.com/fosnola/libstaroffice/releases/download/${TERMUX_PKG_VERSION}/libstaroffice-${TERMUX_PKG_VERSION}.tar.xz
 TERMUX_PKG_SHA256=f94fb0ad8216f97127bedef163a45886b43c62deac5e5b0f5e628e234220c8db
 TERMUX_PKG_DEPENDS="librevenge, zlib"
@@ -13,6 +14,8 @@ termux_step_pre_configure() {
 	local _libgcc_path="$(dirname $_libgcc_file)"
 	local _libgcc_name="$(basename $_libgcc_file)"
 	LDFLAGS+=" -L$_libgcc_path -l:$_libgcc_name"
+
+	autoreconf -fi
 }
 
 termux_step_post_massage() {
