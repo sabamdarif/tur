@@ -11,6 +11,7 @@ TERMUX_PKG_SHA256=5b80ec8ed6726479e0f033c08c38f9df36fa20b15c575378d75ba0c373f154
 TERMUX_PKG_DEPENDS="abseil-cpp, argon2, bison, boost, clucene, cups, curl, dbus, desktop-file-utils, fontconfig, freetype, glib, glm, gpgme, gst-plugins-base, gstreamer, harfbuzz-icu, hicolor-icon-theme, hunspell, libabw, libatomic-ops, libcairo, libcdr, libcmis, libcurl, libe-book, libepoxy, libepubgen, libexpat, libexttextcat, libfreehand, libglvnd, libgraphite, libhyphen, libicu, libjpeg-turbo, liblangtag, libmspub, libmwaw, libnspr, libnss, libnumbertext, libodfgen, liborcus, libpagemaker, libpng, libqxp, libraptor2, librevenge, libstaroffice, libtiff, libtommath, libvisio, libwebp, libwpd, libwps, libx11, libxext, libxinerama, libxml2, libxrandr, libxslt, libzmf, libzxing-cpp, littlecms, lpsolve, openjpeg, openldap, openssl, pango, poppler, python, redland, shared-mime-info, which, xmlsec, zlib"
 TERMUX_PKG_BUILD_DEPENDS="boost-headers, gtk4, gtk3, qt6-qtbase, postgresql, unixodbc, mariadb, libc++"
 TERMUX_PKG_BUILD_IN_SRC=true
+TERMUX_PKG_MAKE_INSTALL_TARGET="distro-pack-install"
 # TODO: remove --disable-skia, some vulkan related compilation error I couldn't solve.
 # TODO: add back qt6 after qmake6 are available
 # TODO: replace --without-system-xmlsec by --with-system-xmlsec whwn xmlsec-nss becomes available by PR
@@ -130,11 +131,17 @@ termux_step_pre_configure() {
 	termux_setup_meson
 	termux_setup_ninja
 
-	# Regenerate configure from patched configure.ac.
-	# Patches modify configure.ac but the pre-generated configure script
-	# is what actually runs. Without this, patches to configure.ac have
-	# no effect on the build.
-	autoconf
+	# Android has no /tmp — rewrite hardcoded /tmp paths to $TERMUX_PREFIX/tmp
+	find "$TERMUX_PKG_SRCDIR" -type f ! -name '*.mk' ! -name '*.fetch' -print0 | \
+		xargs -0 sed -i \
+		-e "s|/tmp|$TERMUX_PREFIX/tmp|g"
+
+	# Remove setup.cfg so Termux doesn't treat this as a Python package
+	# and try 'pip install .' during the install step
+	rm -f setup.cfg
+
+	# Regenerate configure from patched configure.ac
+	NOCONFIGURE=1 ./autogen.sh
 
 	# Use pkg-config-wrapper
 	mkdir -p $TERMUX_PKG_TMPDIR/pkg-config-wrapper-bin
@@ -175,8 +182,4 @@ termux_step_configure() {
 
 termux_step_make() {
 	make -j $(nproc)
-}
-
-termux_step_make_install() {
-	make DESTDIR="$TERMUX_PKG_MASSAGEDIR" distro-pack-install
 }
