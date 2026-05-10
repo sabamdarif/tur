@@ -1,0 +1,11 @@
+--- a/bridges/source/cpp_uno/gcc3_linux_aarch64/cpp2uno.cxx
++++ b/bridges/source/cpp_uno/gcc3_linux_aarch64/cpp2uno.cxx
+@@ -601,7 +601,7 @@
+         reinterpret_cast<char *>(const_cast<unsigned char *>(begin)),
+         reinterpret_cast<char *>(const_cast<unsigned char *>(end)));
+ #else
+-    __builtin___clear_cache(const_cast<unsigned char *>(begin), const_cast<unsigned char *>(end));
++    __builtin___clear_cache(reinterpret_cast<char *>(const_cast<unsigned char *>(begin)), reinterpret_cast<char *>(const_cast<unsigned char *>(end)));
+ #endif
+ }
+ 
