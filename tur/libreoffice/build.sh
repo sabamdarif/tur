@@ -8,7 +8,7 @@ TERMUX_PKG_SHA256=5b80ec8ed6726479e0f033c08c38f9df36fa20b15c575378d75ba0c373f154
 # Ref: https://gitlab.archlinux.org/archlinux/packaging/packages/libreoffice-fresh/-/blob/main/PKGBUILD?ref_type=heads
 # TODO: to be added compared to Archlinux deps="neon, gcc-libs, sh, libetonyek, glib2, glibc"
 # TODO/FIXME: xdg-utils is unsafe for on device build
-TERMUX_PKG_DEPENDS="abseil-cpp, argon2, bison, boost, clucene, cups, curl, dbus, desktop-file-utils, fontconfig, freetype, glib, glm, gpgme, harfbuzz-icu, hicolor-icon-theme, hunspell, libabw, libatomic-ops, libcairo, libcdr, libcmis, libcurl, libe-book, libepoxy, libepubgen, libexpat, libexttextcat, libfreehand, libglvnd, libgraphite, libhyphen, libicu, libjpeg-turbo, liblangtag, libmspub, libmwaw, libnspr, libnss, libnumbertext, libodfgen, liborcus, libpagemaker, libpng, libqxp, libraptor2, librevenge, libstaroffice, libtiff, libtommath, libvisio, libwebp, libwpd, libwps, libx11, libxext, libxinerama, libxml2, libxrandr, libxslt, libzmf, libzxing-cpp, littlecms, lpsolve, openjpeg, openldap, openssl, pango, poppler, python, redland, shared-mime-info, which, xmlsec, zlib"
+TERMUX_PKG_DEPENDS="abseil-cpp, argon2, bison, boost, clucene, cups, curl, dbus, desktop-file-utils, fontconfig, freetype, glib, glm, gpgme, gst-plugins-base, gstreamer, harfbuzz-icu, hicolor-icon-theme, hunspell, libabw, libatomic-ops, libcairo, libcdr, libcmis, libcurl, libe-book, libepoxy, libepubgen, libexpat, libexttextcat, libfreehand, libglvnd, libgraphite, libhyphen, libicu, libjpeg-turbo, liblangtag, libmspub, libmwaw, libnspr, libnss, libnumbertext, libodfgen, liborcus, libpagemaker, libpng, libqxp, libraptor2, librevenge, libstaroffice, libtiff, libtommath, libvisio, libwebp, libwpd, libwps, libx11, libxext, libxinerama, libxml2, libxrandr, libxslt, libzmf, libzxing-cpp, littlecms, lpsolve, openjpeg, openldap, openssl, pango, poppler, python, redland, shared-mime-info, which, xmlsec, zlib"
 TERMUX_PKG_BUILD_DEPENDS="boost-headers, gtk4, gtk3, qt6-qtbase, postgresql, unixodbc, mariadb, libc++"
 TERMUX_PKG_BUILD_IN_SRC=true
 # TODO: remove --disable-skia, some vulkan related compilation error I couldn't solve.
@@ -108,7 +108,6 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --without-system-mythes
 --without-system-coinmp
 --disable-sdremote-bluetooth
---disable-avmedia
 --disable-opencl
 --with-system-abseil
 --disable-gtk3-kde5
@@ -156,6 +155,12 @@ termux_step_pre_configure() {
 	HERE
 	chmod +x $TERMUX_PKG_TMPDIR/pkg-config-wrapper-bin/pkg-config
 	export PATH="$TERMUX_PKG_TMPDIR/pkg-config-wrapper-bin:$PATH"
+
+	# Do NOT set *_FOR_BUILD variables. The configure.ac patch
+	# (0001) unsets CFLAGS/CXXFLAGS/LDFLAGS/CPPFLAGS/CPP for the
+	# CONF-FOR-BUILD subshell. If *_FOR_BUILD are not set, the host
+	# build will use system defaults (which is correct - it should
+	# use the host compiler's default paths, not Termux paths).
 }
 
 termux_step_configure() {
