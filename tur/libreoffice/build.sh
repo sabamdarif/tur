@@ -176,3 +176,7 @@ termux_step_configure() {
 termux_step_make() {
 	make -j $(nproc)
 }
+
+termux_step_make_install() {
+	make DESTDIR="$TERMUX_PKG_MASSAGEDIR" distro-pack-install
+}
