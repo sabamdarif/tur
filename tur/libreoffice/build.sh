@@ -81,7 +81,7 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --without-system-hsqldb
 --without-junit
 --with-system-clucene
---with-system-box2d
+--without-system-box2d
 --without-system-dragonbox
 --without-system-libfixmath
 --without-system-frozen
