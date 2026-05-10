@@ -81,7 +81,7 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --without-system-hsqldb
 --without-junit
 --with-system-clucene
---without-system-box2d
+--with-system-box2d
 --without-system-dragonbox
 --without-system-libfixmath
 --without-system-frozen
@@ -118,6 +118,11 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 "
 
 termux_step_pre_configure() {
+	# lld is strict about version script assignments. sal.map references
+	# symbols that don't exist on Android (backtrace from missing execinfo.h,
+	# libstdc++ ABI symbols absent with libc++). Downgrade to warnings.
+	export LDFLAGS="${LDFLAGS} -Wl,--undefined-version"
+
 	# Ensure meson and ninja are available for CONF-FOR-BUILD (host)
 	# which needs them to build internal harfbuzz
 	termux_setup_meson
