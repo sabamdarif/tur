@@ -102,7 +102,7 @@ index 6b9184809..88fa9a159 100644
      double csdx = 0.0;
      double csdy = 0.0;
 +#if POPPLER_CHECK_VERSION(25, 9, 0)
-+    if (!state->getFont() || state->getFont()->getWMode() == WritingMode::Horizontal)
++    if (!state->getFont() || state->getFont()->getWMode() == Gfx8BitFont::WritingMode::Horizontal)
 +#else
      if (!state->getFont() || !state->getFont()->getWMode())
 +#endif
