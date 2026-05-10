@@ -13,7 +13,7 @@ index 418f7c8..fa7480d 100644
  
  #ifdef FORTIFY
 diff --git a/shared/commonlib.c b/shared/commonlib.c
-index 5ab4f12..137eb3a 100644
+index 5ab4f12..d93f704 100644
 --- a/shared/commonlib.c
 +++ b/shared/commonlib.c
 @@ -5,6 +5,8 @@
@@ -23,9 +23,9 @@ index 5ab4f12..137eb3a 100644
 +#elif defined(__ANDROID__)
 +#include <sys/time.h>
  #else
- #include <sys/timeb.h>
+ # include <sys/timeb.h>
  #endif
-@@ -843,6 +845,12 @@
+@@ -843,6 +845,12 @@ double timeNow(void)
      timeBase = clockNow() - (double) now.QuadPart/(double) freq.QuadPart;
    }
    return( timeBase + (double) now.QuadPart/(double) freq.QuadPart );

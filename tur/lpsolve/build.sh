@@ -8,12 +8,6 @@ TERMUX_PKG_SRCURL="https://downloads.sourceforge.net/project/lpsolve/lpsolve/${T
 TERMUX_PKG_SHA256=6d4abff5cc6aaa933ae8e6c17a226df0fc0b671c438f69715d41d09fe81f902f
 TERMUX_PKG_BUILD_IN_SRC=true
 
-termux_step_pre_configure() {
-	if [ "${TERMUX_ON_DEVICE_BUILD}" = false ]; then
-		termux_error_exit "This package doesn't support cross-compiling."
-	fi
-}
-
 termux_step_configure() {
 	:
 }
@@ -21,19 +15,17 @@ termux_step_configure() {
 termux_step_make() {
 	cd lpsolve55
 	sh -x ccc
-	rm bin/ux*/liblpsolve55.a
+	rm -f bin/liblpsolve55.a
 
 	cd ../lp_solve
 	sh -x ccc
-	cd .
+	cd ..
 }
-
 
 termux_step_make_install() {
 	install -dm755 "$TERMUX_PREFIX"/{bin,lib,include/lpsolve}
-	install -m755 lp_solve/bin/ux*/lp_solve "$TERMUX_PREFIX"/bin/
-	install -m755 lpsolve55/bin/ux*/liblpsolve55.so "$TERMUX_PREFIX"/lib/
+	install -m755 lp_solve/bin/lp_solve "$TERMUX_PREFIX"/bin/
+	install -m755 lpsolve55/bin/liblpsolve55.so "$TERMUX_PREFIX"/lib/
 	install -m644 lp*.h "$TERMUX_PREFIX"/include/lpsolve/
-
 	install -D -m644 README.txt -t "$TERMUX_PREFIX/share/licenses/$TERMUX_PKG_NAME/"
 }

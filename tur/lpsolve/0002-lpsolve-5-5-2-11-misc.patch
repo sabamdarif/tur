@@ -1,3 +1,5 @@
+diff --git a/bfp/bfp_LUSOL/ccc b/bfp/bfp_LUSOL/ccc
+index 754738b..df67c1b 100644
 --- a/bfp/bfp_LUSOL/ccc
 +++ b/bfp/bfp_LUSOL/ccc
 @@ -1,13 +1,13 @@
@@ -16,6 +18,8 @@
  $c /tmp/platform.c -o /tmp/platform
  PLATFORM=`/tmp/platform`
  rm /tmp/platform /tmp/platform.c >/dev/null 2>&1
+diff --git a/bfp/bfp_LUSOL/ccc.osx b/bfp/bfp_LUSOL/ccc.osx
+index 0328f8a..6cd840e 100644
 --- a/bfp/bfp_LUSOL/ccc.osx
 +++ b/bfp/bfp_LUSOL/ccc.osx
 @@ -1,13 +1,13 @@
@@ -34,6 +38,8 @@
  $c /tmp/platform.c -o /tmp/platform
  PLATFORM=`/tmp/platform`
  rm /tmp/platform /tmp/platform.c >/dev/null 2>&1
+diff --git a/demo/ccc b/demo/ccc
+index 38713a1..cbbff4c 100644
 --- a/demo/ccc
 +++ b/demo/ccc
 @@ -1,6 +1,5 @@
@@ -44,6 +50,8 @@
  math=-lm
  
  def=
+diff --git a/demo/ccc.osx b/demo/ccc.osx
+index cd6c2b4..de3f808 100644
 --- a/demo/ccc.osx
 +++ b/demo/ccc.osx
 @@ -1,5 +1,5 @@
@@ -53,6 +61,8 @@
  
  math=-lm
  
+diff --git a/lp_solve/ccc b/lp_solve/ccc
+index bd5a938..cc56063 100644
 --- a/lp_solve/ccc
 +++ b/lp_solve/ccc
 @@ -1,6 +1,6 @@
@@ -87,6 +97,8 @@
  
 -$c -I.. -I../bfp -I../bfp/bfp_LUSOL -I../bfp/bfp_LUSOL/LUSOL -I../colamd -I../shared $opts $def $NOISNAN -DYY_NEVER_INTERACTIVE -DPARSER_LP -DINVERSE_ACTIVE=INVERSE_LUSOL -DRoleIsExternalInvEngine $src -o bin/$PLATFORM/lp_solve $math $dl
 +$c $CFLAGS $LDFLAGS -I.. -I../bfp -I../bfp/bfp_LUSOL -I../bfp/bfp_LUSOL/LUSOL -I../colamd -I../shared $opts $def $NOISNAN -DYY_NEVER_INTERACTIVE -DPARSER_LP -DINVERSE_ACTIVE=INVERSE_LUSOL -DRoleIsExternalInvEngine $src -o bin/$PLATFORM/lp_solve $math $dl
+diff --git a/lp_solve/ccc.osx b/lp_solve/ccc.osx
+index 138bc3d..c95d3d2 100644
 --- a/lp_solve/ccc.osx
 +++ b/lp_solve/ccc.osx
 @@ -1,6 +1,6 @@
@@ -121,6 +133,8 @@
  
 -$c -I.. -I../bfp -I../bfp/bfp_LUSOL -I../bfp/bfp_LUSOL/LUSOL -I../colamd -I../shared $opts $def $NOISNAN -DYY_NEVER_INTERACTIVE -DPARSER_LP -DINVERSE_ACTIVE=INVERSE_LUSOL -DRoleIsExternalInvEngine $src -o bin/$PLATFORM/lp_solve $math $dl
 +$c $CFLAGS $LDFLAGS -I.. -I../bfp -I../bfp/bfp_LUSOL -I../bfp/bfp_LUSOL/LUSOL -I../colamd -I../shared $opts $def $NOISNAN -DYY_NEVER_INTERACTIVE -DPARSER_LP -DINVERSE_ACTIVE=INVERSE_LUSOL -DRoleIsExternalInvEngine $src -o bin/$PLATFORM/lp_solve $math $dl
+diff --git a/lpsolve55/ccc b/lpsolve55/ccc
+index 999f5f6..d298d50 100644
 --- a/lpsolve55/ccc
 +++ b/lpsolve55/ccc
 @@ -1,6 +1,6 @@
@@ -167,6 +181,8 @@
  fi
  
  rm *.o 2>/dev/null
+diff --git a/lpsolve55/ccc.aix b/lpsolve55/ccc.aix
+index d07cee5..9ae3148 100644
 --- a/lpsolve55/ccc.aix
 +++ b/lpsolve55/ccc.aix
 @@ -4,14 +4,14 @@ src='../lp_MDO.c ../shared/commonlib.c ../shared/mmio.c ../shared/myblas.c ../in
@@ -206,6 +222,8 @@
  
  if [ "$so" != "" ]
  then
+diff --git a/lpsolve55/ccc.hp-ux b/lpsolve55/ccc.hp-ux
+index 0d161c6..243197b 100644
 --- a/lpsolve55/ccc.hp-ux
 +++ b/lpsolve55/ccc.hp-ux
 @@ -1,12 +1,12 @@
@@ -243,6 +261,8 @@
  
  if [ "$so" != "" ]
  then
+diff --git a/lpsolve55/ccc.osx b/lpsolve55/ccc.osx
+index 0ef403e..f74aaa2 100644
 --- a/lpsolve55/ccc.osx
 +++ b/lpsolve55/ccc.osx
 @@ -1,6 +1,6 @@
@@ -271,6 +291,8 @@
  $c "$MYTMP"/isnan.c -o "$MYTMP"/isnan $math >/dev/null 2>&1
  if [ $? = 0 ]
  then NOISNAN=
+diff --git a/lpsolve55/ccc.solaris b/lpsolve55/ccc.solaris
+index e262693..82a9a81 100644
 --- a/lpsolve55/ccc.solaris
 +++ b/lpsolve55/ccc.solaris
 @@ -1,12 +1,12 @@
@@ -308,6 +330,8 @@
  
  if [ "$so" != "" ]
  then
+diff --git a/lpsolve55/cccLUSOL.osx b/lpsolve55/cccLUSOL.osx
+index 52f8c74..e33c58f 100644
 --- a/lpsolve55/cccLUSOL.osx
 +++ b/lpsolve55/cccLUSOL.osx
 @@ -1,11 +1,11 @@
