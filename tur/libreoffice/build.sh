@@ -19,6 +19,7 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --enable-split-app-modules
 --enable-release-build
 
+--disable-skia
 --disable-avahi
 --enable-dbus
 --enable-evolution2
