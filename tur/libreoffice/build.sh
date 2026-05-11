@@ -33,7 +33,7 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --disable-introspection
 --enable-lto
 --enable-openssl
---enable-odk
+--disable-odk
 --enable-scripting-beanshell
 --enable-scripting-javascript
 --disable-dconf
