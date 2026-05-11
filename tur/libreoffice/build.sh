@@ -131,10 +131,6 @@ termux_step_pre_configure() {
 	termux_setup_meson
 	termux_setup_ninja
 
-	# Android has no /tmp — rewrite hardcoded /tmp paths to $TERMUX_PREFIX/tmp
-	find "$TERMUX_PKG_SRCDIR" -type f ! -name '*.mk' ! -name '*.fetch' -print0 | \
-		xargs -0 sed -i \
-		-e "s|/tmp|$TERMUX_PREFIX/tmp|g"
 
 	# Remove setup.cfg so Termux doesn't treat this as a Python package
 	# and try 'pip install .' during the install step
