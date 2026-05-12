@@ -126,6 +126,13 @@ termux_step_pre_configure() {
 	# libstdc++ ABI symbols absent with libc++). Downgrade to warnings.
 	export LDFLAGS="${LDFLAGS} -Wl,--undefined-version"
 
+	# 32-bit arches: CoinMP libraries need compiler-rt builtins from libgcc
+	# (ARM: __aeabi_* division helpers; x86: __divdi3/__moddi3 for 64-bit division).
+	# Without explicit linkage the Termux symbol checker flags them as undefined.
+	if [ "$TERMUX_ARCH" = "arm" ] || [ "$TERMUX_ARCH" = "i686" ]; then
+		export LDFLAGS="${LDFLAGS} -lgcc"
+	fi
+
 	# Ensure meson and ninja are available for CONF-FOR-BUILD (host)
 	# which needs them to build internal harfbuzz
 	termux_setup_meson

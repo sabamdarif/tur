@@ -1,5 +1,5 @@
 diff --git a/cppuhelper/source/defaultbootstrap.cxx b/cppuhelper/source/defaultbootstrap.cxx
-index ca70a91d3..d5caaee1a 100644
+index ca70a91d3..1842088a4 100644
 --- a/cppuhelper/source/defaultbootstrap.cxx
 +++ b/cppuhelper/source/defaultbootstrap.cxx
 @@ -10,6 +10,8 @@
@@ -69,6 +69,32 @@ index ca70a91d3..d5caaee1a 100644
      std::vector< cppu::ContextEntry_Init > context_values
      {
          cppu::ContextEntry_Init(
+@@ -77,7 +120,9 @@ cppu::defaultBootstrap_InitialComponentContext(OUString const & iniUri)
+                 cppuhelper::detail::create_bootstrap_macro_expander_factory()),
+             true)
+     };
++    fprintf(stderr, "INFO: context_values built\n"); fflush(stderr);
+     smgr->addSingletonContextEntries(&context_values);
++    fprintf(stderr, "INFO: addSingletonContextEntries OK\n"); fflush(stderr);
+     context_values.push_back(
+         cppu::ContextEntry_Init(
+             u"/services/com.sun.star.security.AccessController/mode"_ustr,
+@@ -88,10 +133,15 @@ cppu::defaultBootstrap_InitialComponentContext(OUString const & iniUri)
+             css::uno::Any(
+                 u"com.sun.star.security.AccessController"_ustr),
+             true));
++    fprintf(stderr, "INFO: creating component context...\n"); fflush(stderr);
+     css::uno::Reference< css::uno::XComponentContext > context(
+         createComponentContext(context_values.data(), context_values.size()));
++    fprintf(stderr, "INFO: createComponentContext OK\n"); fflush(stderr);
+     smgr->setContext(context);
++    fprintf(stderr, "INFO: smgr->setContext OK\n"); fflush(stderr);
+     cppu::installTypeDescriptionManager(tmgr);
++    fprintf(stderr, "INFO: installTypeDescriptionManager OK\n"); fflush(stderr);
++    fprintf(stderr, "INFO: defaultBootstrap_InitialComponentContext DONE\n"); fflush(stderr);
+     return context;
+ }
+ 
 diff --git a/cppuhelper/source/exc_thrower.cxx b/cppuhelper/source/exc_thrower.cxx
 index db2c9b0d5..28675cb19 100644
 --- a/cppuhelper/source/exc_thrower.cxx
@@ -82,6 +108,101 @@ index db2c9b0d5..28675cb19 100644
      return Any();
  #else
      Mapping cpp2uno(Environment::getCurrent(), Environment(u"" UNO_LB_UNO ""_ustr));
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index da313a19a..f0a29f2d1 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -150,6 +150,7 @@
+ #define GETPID _getpid
+ #else
+ #include <unistd.h>
++#include <cstdio>
+ #define GETPID getpid
+ #endif
+ 
+@@ -474,14 +475,20 @@ void Desktop::Init()
+     // something to enforce this gotcha
+     try
+     {
++        fprintf(stderr, "DEBUG: calling InitApplicationServiceManager...\n"); fflush(stderr);
+         InitApplicationServiceManager();
++        fprintf(stderr, "DEBUG: InitApplicationServiceManager OK\n"); fflush(stderr);
+     }
+     catch (css::uno::Exception & e)
+     {
++        fprintf(stderr, "DEBUG: InitApplicationServiceManager FAILED: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
+         HandleBootstrapErrors( BE_UNO_SERVICEMANAGER, e.Message );
+         std::abort();
+     }
+ 
++    fprintf(stderr, "DEBUG: checking safe mode...\n"); fflush(stderr);
+     // Check whether safe mode is enabled
+     const CommandLineArgs& rCmdLineArgs = GetCommandLineArgs();
+     // Check if we are restarting from safe mode - in that case we don't want to enter it again
+@@ -490,12 +497,14 @@ void Desktop::Init()
+     else if (rCmdLineArgs.IsSafeMode() || sfx2::SafeMode::hasFlag())
+         Application::EnableSafeMode();
+ 
++    fprintf(stderr, "DEBUG: reactOnSafeMode...\n"); fflush(stderr);
+     // When we are in SafeMode we need to do changes before the configuration
+     // gets read (langselect::prepareLocale() by UNO API -> Components::Components)
+     // This may prepare SafeMode or restore from it by moving data in
+     // the UserConfiguration directory
+     comphelper::BackupFileHelper::reactOnSafeMode(Application::IsSafeModeEnabled());
+ 
++    fprintf(stderr, "DEBUG: checking OfficeRestartInProgress...\n"); fflush(stderr);
+     // tdf117100: do not try to re-install extensions after the requested restart
+     if (officecfg::Setup::Office::OfficeRestartInProgress::get())
+     {
+@@ -503,6 +512,7 @@ void Desktop::Init()
+             GetCommandLineArgs().RemoveFilesFromOpenListEndingWith(u".oxt"_ustr);
+     }
+ 
++    fprintf(stderr, "DEBUG: prepareLocale...\n"); fflush(stderr);
+     try
+     {
+         if (!langselect::prepareLocale())
+@@ -512,9 +522,14 @@ void Desktop::Init()
+     }
+     catch (css::uno::Exception & e)
+     {
++        fprintf(stderr, "DEBUG: prepareLocale FAILED: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
+         SetBootstrapError( BE_OFFICECONFIG_BROKEN, e.Message );
+     }
+ 
++    fprintf(stderr, "DEBUG: prepareLocale done\n"); fflush(stderr);
++
+     // test code for ProfileSafeMode to allow testing the fail
+     // of loading the office configuration initially. To use,
+     // either set to true and compile, or set a breakpoint
+@@ -526,12 +541,15 @@ void Desktop::Init()
+         SetBootstrapError(BE_OFFICECONFIG_BROKEN, OUString());
+     }
+ 
++    fprintf(stderr, "DEBUG: RequestHandler::Enable...\n"); fflush(stderr);
+     // start ipc thread only for non-remote offices
+     RequestHandler::Status aStatus = RequestHandler::Enable(true);
++    fprintf(stderr, "DEBUG: RequestHandler::Enable returned %d\n", (int)aStatus); fflush(stderr);
+     if ( aStatus == RequestHandler::IPC_STATUS_PIPE_ERROR )
+     {
+ #if defined(__ANDROID__) || defined(EMSCRIPTEN)
+         // Ignore crack pipe errors on Android
++        fprintf(stderr, "DEBUG: ignoring pipe error on Android\n"); fflush(stderr);
+ #else
+         // Keep using this oddly named BE_PATHINFO_MISSING value
+         // for pipe-related errors on other platforms. Of course
+@@ -562,6 +580,7 @@ void Desktop::Init()
+         RequestHandler::Disable();
+     }
+     pSignalHandler = osl_addSignalHandler(SalMainPipeExchangeSignal_impl, nullptr);
++    fprintf(stderr, "DEBUG: Desktop::Init() DONE\n"); fflush(stderr);
+ 
+ #if HAVE_EMSCRIPTEN_PROXY_POSIX_SOCKETS
+     {
 diff --git a/desktop/source/app/appinit.cxx b/desktop/source/app/appinit.cxx
 index 8f92acecb..7be0b9460 100644
 --- a/desktop/source/app/appinit.cxx
