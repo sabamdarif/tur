@@ -1,0 +1,198 @@
+diff --git a/cppuhelper/source/defaultbootstrap.cxx b/cppuhelper/source/defaultbootstrap.cxx
+index ca70a91d3..d5caaee1a 100644
+--- a/cppuhelper/source/defaultbootstrap.cxx
++++ b/cppuhelper/source/defaultbootstrap.cxx
+@@ -10,6 +10,8 @@
+ #include <sal/config.h>
+ 
+ #include <vector>
++#include <iostream>
++#include <cstdio>
+ 
+ #include <com/sun/star/uno/DeploymentException.hpp>
+ #include <com/sun/star/uno/Any.hxx>
+@@ -49,14 +51,55 @@ cppu::defaultBootstrap_InitialComponentContext(OUString const & iniUri)
+ {
+     rtl::Bootstrap bs(iniUri);
+     if (bs.getHandle() == nullptr) {
++        std::cerr << "FATAL: Cannot open UNO ini: "
++                  << OUStringToOString(iniUri, RTL_TEXTENCODING_UTF8).getStr() << std::endl;
+         throw css::uno::DeploymentException(
+             "Cannot open uno ini " + iniUri);
+     }
++    // Diagnostic: print the resolved UNO_SERVICES and UNO_TYPES paths
++    {
++        OUString sServices, sTypes;
++        bs.getFrom(u"UNO_SERVICES"_ustr, sServices);
++        bs.getFrom(u"UNO_TYPES"_ustr, sTypes);
++        std::cerr << "INFO: UNO ini: " << OUStringToOString(iniUri, RTL_TEXTENCODING_UTF8).getStr() << std::endl;
++        std::cerr << "INFO: UNO_SERVICES=" << OUStringToOString(sServices, RTL_TEXTENCODING_UTF8).getStr() << std::endl;
++        std::cerr << "INFO: UNO_TYPES=" << OUStringToOString(sTypes, RTL_TEXTENCODING_UTF8).getStr() << std::endl;
++    }
+     rtl::Reference smgr(
+         new cppuhelper::ServiceManager);
+-    smgr->init(getBootstrapVariable(bs, u"UNO_SERVICES"_ustr));
++    try {
++        std::cerr << "INFO: calling smgr->init()..." << std::endl;
++        smgr->init(getBootstrapVariable(bs, u"UNO_SERVICES"_ustr));
++        std::cerr << "INFO: smgr->init() OK" << std::endl;
++    } catch (const css::uno::Exception& e) {
++        fprintf(stderr, "FATAL: smgr->init() failed: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++        throw;
++    } catch (const std::exception& e) {
++        fprintf(stderr, "FATAL: smgr->init() std::exception: %s\n", e.what());
++        fflush(stderr);
++        throw;
++    } catch (...) {
++        fprintf(stderr, "FATAL: smgr->init() unknown exception\n");
++        fflush(stderr);
++        throw;
++    }
+     rtl::Reference tmgr(new cppuhelper::TypeManager);
+-    tmgr->init(getBootstrapVariable(bs, u"UNO_TYPES"_ustr));
++    try {
++        std::cerr << "INFO: calling tmgr->init()..." << std::endl;
++        tmgr->init(getBootstrapVariable(bs, u"UNO_TYPES"_ustr));
++        std::cerr << "INFO: tmgr->init() OK" << std::endl;
++    } catch (const css::uno::Exception& e) {
++        fprintf(stderr, "FATAL: tmgr->init() failed: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++        throw;
++    } catch (...) {
++        fprintf(stderr, "FATAL: tmgr->init() unknown exception\n");
++        fflush(stderr);
++        throw;
++    }
+     std::vector< cppu::ContextEntry_Init > context_values
+     {
+         cppu::ContextEntry_Init(
+diff --git a/cppuhelper/source/exc_thrower.cxx b/cppuhelper/source/exc_thrower.cxx
+index db2c9b0d5..28675cb19 100644
+--- a/cppuhelper/source/exc_thrower.cxx
++++ b/cppuhelper/source/exc_thrower.cxx
+@@ -255,7 +255,7 @@ void SAL_CALL throwException( Any const & exc )
+ Any SAL_CALL getCaughtException()
+ {
+     // why does this differ from RETHROW_FAKE_EXCEPTIONS?
+-#if defined(ANDROID)
++#if defined(ANDROID) || defined(__ANDROID__)
+     return Any();
+ #else
+     Mapping cpp2uno(Environment::getCurrent(), Environment(u"" UNO_LB_UNO ""_ustr));
+diff --git a/desktop/source/app/appinit.cxx b/desktop/source/app/appinit.cxx
+index 8f92acecb..7be0b9460 100644
+--- a/desktop/source/app/appinit.cxx
++++ b/desktop/source/app/appinit.cxx
+@@ -19,6 +19,7 @@
+ 
+ 
+ #include <algorithm>
++#include <iostream>
+ #include <vector>
+ 
+ #include <app.hxx>
+@@ -80,9 +81,15 @@ void Desktop::InitApplicationServiceManager()
+            cppu::defaultBootstrap_InitialComponentContext( aUnoRc )->getServiceManager(),
+            UNO_QUERY_THROW);
+ #else
+-    sm.set(
+-        cppu::defaultBootstrap_InitialComponentContext()->getServiceManager(),
+-        UNO_QUERY_THROW);
++    try {
++        sm.set(
++            cppu::defaultBootstrap_InitialComponentContext()->getServiceManager(),
++            UNO_QUERY_THROW);
++    } catch (const css::uno::Exception& e) {
++        std::cerr << "FATAL: UNO bootstrap failed: "
++                  << OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr() << std::endl;
++        throw;
++    }
+ #endif
+     comphelper::setProcessServiceFactory(sm);
+ #if defined EMSCRIPTEN
+diff --git a/desktop/source/app/userinstall.cxx b/desktop/source/app/userinstall.cxx
+index 7243db43e..40298667b 100644
+--- a/desktop/source/app/userinstall.cxx
++++ b/desktop/source/app/userinstall.cxx
+@@ -27,7 +27,7 @@
+ #include <officecfg/Setup.hxx>
+ #include <osl/file.h>
+ #include <osl/file.hxx>
+-#if defined ANDROID || defined IOS || defined EMSCRIPTEN
++#if defined ANDROID || defined __ANDROID__ || defined IOS || defined EMSCRIPTEN
+ #include <rtl/bootstrap.hxx>
+ #endif
+ #include <rtl/ustring.hxx>
+@@ -40,7 +40,7 @@ namespace desktop::userinstall {
+ 
+ namespace {
+ 
+-#if !(defined ANDROID || defined IOS || defined EMSCRIPTEN)
++#if !(defined ANDROID || defined __ANDROID__ || defined IOS || defined EMSCRIPTEN)
+ osl::FileBase::RC copyRecursive(
+     OUString const & srcUri, OUString const & dstUri)
+ {
+@@ -104,7 +104,7 @@ Status create(OUString const & uri) {
+     if (e != osl::FileBase::E_None && e != osl::FileBase::E_EXIST) {
+         return ERROR_OTHER;
+     }
+-#if !(defined ANDROID || defined IOS || defined EMSCRIPTEN)
++#if !(defined ANDROID || defined __ANDROID__ || defined IOS || defined EMSCRIPTEN)
+ #if defined UNIX
+     // Set safer permissions for the user directory by default:
+     osl::File::setAttributes(
+diff --git a/sal/osl/unx/security.cxx b/sal/osl/unx/security.cxx
+index 733aa0dfc..f3486663b 100644
+--- a/sal/osl/unx/security.cxx
++++ b/sal/osl/unx/security.cxx
+@@ -47,7 +47,7 @@
+ 
+ #include "secimpl.hxx"
+ 
+-#ifdef ANDROID
++#if defined(ANDROID) || defined(__ANDROID__)
+ #define getpwuid_r(uid, pwd, buf, buflen, result) (*(result) = getpwuid(uid), (*(result) ? (memcpy (buf, *(result), sizeof (struct passwd)), 0) : errno))
+ #include <rtl/bootstrap.hxx>
+ #endif
+@@ -168,8 +168,38 @@ oslSecurity SAL_CALL osl_getCurrentSecurity()
+             }
+             [[fallthrough]];
+         default:
++#if defined(__ANDROID__)
++        {
++            // Bionic may not have /etc/passwd — provide synthetic fallback
++            // using environment variables (Termux sets $HOME and $USER)
++            char * buffer = p->m_buffer;
++            assert(n >= 256);
++            const char* user = getenv("USER");
++            if (!user) user = "termux";
++            const char* home = getenv("HOME");
++            if (!home) home = "@TERMUX_HOME@";
++            strcpy(buffer, user);
++            p->m_pPasswd.pw_name = buffer;
++            buffer += strlen(buffer) + 1;
++            strcpy(buffer, "*");
++            p->m_pPasswd.pw_passwd = buffer;
++            buffer += strlen(buffer) + 1;
++            p->m_pPasswd.pw_uid = getuid();
++            p->m_pPasswd.pw_gid = getgid();
++            strcpy(buffer, "Termux User");
++            p->m_pPasswd.pw_gecos = buffer;
++            buffer += strlen(buffer) + 1;
++            strcpy(buffer, home);
++            p->m_pPasswd.pw_dir = buffer;
++            buffer += strlen(buffer) + 1;
++            strcpy(buffer, "");
++            p->m_pPasswd.pw_shell = buffer;
++            return p;
++        }
++#else
+             deleteSecurityImpl(p);
+             return nullptr;
++#endif
+         }
+ #endif
+     }
