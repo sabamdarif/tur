@@ -109,7 +109,7 @@ index db2c9b0d5..28675cb19 100644
  #else
      Mapping cpp2uno(Environment::getCurrent(), Environment(u"" UNO_LB_UNO ""_ustr));
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
-index da313a19a..f0a29f2d1 100644
+index da313a19a..1754d922d 100644
 --- a/desktop/source/app/app.cxx
 +++ b/desktop/source/app/app.cxx
 @@ -150,6 +150,7 @@
@@ -141,7 +141,7 @@ index da313a19a..f0a29f2d1 100644
      // Check whether safe mode is enabled
      const CommandLineArgs& rCmdLineArgs = GetCommandLineArgs();
      // Check if we are restarting from safe mode - in that case we don't want to enter it again
-@@ -490,12 +497,14 @@ void Desktop::Init()
+@@ -490,19 +497,45 @@ void Desktop::Init()
      else if (rCmdLineArgs.IsSafeMode() || sfx2::SafeMode::hasFlag())
          Application::EnableSafeMode();
  
@@ -153,18 +153,45 @@ index da313a19a..f0a29f2d1 100644
      comphelper::BackupFileHelper::reactOnSafeMode(Application::IsSafeModeEnabled());
  
 +    fprintf(stderr, "DEBUG: checking OfficeRestartInProgress...\n"); fflush(stderr);
++    // Print configuration layers for debugging
++    {
++        OUString cfgLayers(u"${CONFIGURATION_LAYERS}"_ustr);
++        rtl::Bootstrap::expandMacros(cfgLayers);
++        fprintf(stderr, "DEBUG: CONFIGURATION_LAYERS=%s\n",
++                OUStringToOString(cfgLayers, RTL_TEXTENCODING_UTF8).getStr());
++        OUString brandBase(u"${BRAND_BASE_DIR}"_ustr);
++        rtl::Bootstrap::expandMacros(brandBase);
++        fprintf(stderr, "DEBUG: BRAND_BASE_DIR=%s\n",
++                OUStringToOString(brandBase, RTL_TEXTENCODING_UTF8).getStr());
++        OUString userInst(u"${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}"_ustr);
++        rtl::Bootstrap::expandMacros(userInst);
++        fprintf(stderr, "DEBUG: UserInstallation=%s\n",
++                OUStringToOString(userInst, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++    }
      // tdf117100: do not try to re-install extensions after the requested restart
-     if (officecfg::Setup::Office::OfficeRestartInProgress::get())
-     {
-@@ -503,6 +512,7 @@ void Desktop::Init()
-             GetCommandLineArgs().RemoveFilesFromOpenListEndingWith(u".oxt"_ustr);
+-    if (officecfg::Setup::Office::OfficeRestartInProgress::get())
+-    {
+-        if (!officecfg::Office::Common::Misc::FirstRun::get())
+-            GetCommandLineArgs().RemoveFilesFromOpenListEndingWith(u".oxt"_ustr);
++    try {
++        if (officecfg::Setup::Office::OfficeRestartInProgress::get())
++        {
++            if (!officecfg::Office::Common::Misc::FirstRun::get())
++                GetCommandLineArgs().RemoveFilesFromOpenListEndingWith(u".oxt"_ustr);
++        }
++    } catch (const css::uno::Exception& e) {
++        fprintf(stderr, "FATAL: OfficeRestartInProgress config read failed: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++        // Don't rethrow — this is not critical, just skip it
      }
  
 +    fprintf(stderr, "DEBUG: prepareLocale...\n"); fflush(stderr);
      try
      {
          if (!langselect::prepareLocale())
-@@ -512,9 +522,14 @@ void Desktop::Init()
+@@ -512,9 +545,14 @@ void Desktop::Init()
      }
      catch (css::uno::Exception & e)
      {
@@ -179,7 +206,7 @@ index da313a19a..f0a29f2d1 100644
      // test code for ProfileSafeMode to allow testing the fail
      // of loading the office configuration initially. To use,
      // either set to true and compile, or set a breakpoint
-@@ -526,12 +541,15 @@ void Desktop::Init()
+@@ -526,12 +564,15 @@ void Desktop::Init()
          SetBootstrapError(BE_OFFICECONFIG_BROKEN, OUString());
      }
  
@@ -195,7 +222,7 @@ index da313a19a..f0a29f2d1 100644
  #else
          // Keep using this oddly named BE_PATHINFO_MISSING value
          // for pipe-related errors on other platforms. Of course
-@@ -562,6 +580,7 @@ void Desktop::Init()
+@@ -562,6 +603,7 @@ void Desktop::Init()
          RequestHandler::Disable();
      }
      pSignalHandler = osl_addSignalHandler(SalMainPipeExchangeSignal_impl, nullptr);
