@@ -598,3 +598,88 @@ index 733aa0dfc..f3486663b 100644
          }
  #endif
      }
+diff --git a/vcl/source/app/svmain.cxx b/vcl/source/app/svmain.cxx
+index 58eec341a..e82907153 100644
+--- a/vcl/source/app/svmain.cxx
++++ b/vcl/source/app/svmain.cxx
+@@ -21,6 +21,7 @@
+ #include <sal/log.hxx>
+ 
+ #include <cassert>
++#include <cstdio>
+ 
+ #include <osl/file.hxx>
+ #include <osl/signal.h>
+@@ -225,10 +226,27 @@ int ImplSVMain()
+ 
+     if( bInit )
+     {
++        fprintf(stderr, "DEBUG: VCL: calling App->Main()...\n"); fflush(stderr);
+         // call application main
+         pSVData->maAppData.mbInAppMain = true;
+-        nReturn = pSVData->mpApp->Main();
++        try {
++            nReturn = pSVData->mpApp->Main();
++        } catch (const css::uno::Exception& e) {
++            fprintf(stderr, "FATAL: VCL: App->Main() threw UNO exception: %s\n",
++                    OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++            fflush(stderr);
++            throw;
++        } catch (const std::exception& e) {
++            fprintf(stderr, "FATAL: VCL: App->Main() threw std exception: %s\n", e.what());
++            fflush(stderr);
++            throw;
++        } catch (...) {
++            fprintf(stderr, "FATAL: VCL: App->Main() threw unknown exception\n");
++            fflush(stderr);
++            throw;
++        }
+         pSVData->maAppData.mbInAppMain = false;
++        fprintf(stderr, "DEBUG: VCL: App->Main() returned %d\n", nReturn); fflush(stderr);
+     }
+ 
+     if( pSVData->mxDisplayConnection.is() )
+@@ -308,16 +326,21 @@ bool InitVCL()
+     {
+         // call init to initialize application class
+         // soffice/sfx implementation creates the global service manager
++        fprintf(stderr, "DEBUG: VCL: calling App->Init()...\n"); fflush(stderr);
+         pSVData->mpApp->Init();
++        fprintf(stderr, "DEBUG: VCL: App->Init() returned\n"); fflush(stderr);
+     }
+ 
+     try
+     {
++        fprintf(stderr, "DEBUG: VCL: reading SvtSysLocaleOptions for LANGUAGE...\n"); fflush(stderr);
+         //Now that uno has been bootstrapped we can ask the config what the UI language is so that we can
+         //force that in as $LANGUAGE. That way we can get gtk to render widgets RTL
+         //if we have a RTL UI in an otherwise LTR locale and get gettext using externals (e.g. python)
+         //to match their translations to our preferred UI language
+         OUString aLocaleString(SvtSysLocaleOptions().GetRealUILanguageTag().getGlibcLocaleString(u".UTF-8"));
++        fprintf(stderr, "DEBUG: VCL: locale string = %s\n",
++                OUStringToOString(aLocaleString, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         if (!aLocaleString.isEmpty())
+         {
+             MsLangId::getSystemUILanguage(); //call this now to pin what the system UI really was
+@@ -327,10 +350,13 @@ bool InitVCL()
+     }
+     catch (const uno::Exception &)
+     {
++        fprintf(stderr, "DEBUG: VCL: locale config read failed (non-fatal), continuing\n"); fflush(stderr);
+         TOOLS_INFO_EXCEPTION("vcl.app", "Unable to get ui language:");
+     }
+ 
++    fprintf(stderr, "DEBUG: VCL: AfterAppInit...\n"); fflush(stderr);
+     pSVData->mpDefInst->AfterAppInit();
++    fprintf(stderr, "DEBUG: VCL: AfterAppInit OK\n"); fflush(stderr);
+ 
+     // Fetch AppFileName and make it absolute before the workdir changes...
+     OUString aExeFileName;
+@@ -364,6 +390,7 @@ bool InitVCL()
+     unsetenv("DESKTOP_STARTUP_ID");
+ #endif
+ 
++    fprintf(stderr, "DEBUG: VCL: InitVCL() complete\n"); fflush(stderr);
+     return true;
+ }
+ 
