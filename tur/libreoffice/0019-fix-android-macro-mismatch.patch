@@ -109,7 +109,7 @@ index db2c9b0d5..28675cb19 100644
  #else
      Mapping cpp2uno(Environment::getCurrent(), Environment(u"" UNO_LB_UNO ""_ustr));
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
-index da313a19a..1754d922d 100644
+index da313a19a..1a80b27db 100644
 --- a/desktop/source/app/app.cxx
 +++ b/desktop/source/app/app.cxx
 @@ -150,6 +150,7 @@
@@ -230,19 +230,227 @@ index da313a19a..1754d922d 100644
  
  #if HAVE_EMSCRIPTEN_PROXY_POSIX_SOCKETS
      {
+@@ -1301,6 +1343,7 @@ static ExecuteGlobals* pExecGlobals = nullptr;
+ static std::chrono::high_resolution_clock::time_point startFuncTp;
+ int Desktop::Main()
+ {
++    fprintf(stderr, "DEBUG: Desktop::Main() START\n"); fflush(stderr);
+     std::chrono::high_resolution_clock::time_point startT;
+ 
+ #ifdef SAL_LOG_INFO
+@@ -1326,33 +1369,45 @@ int Desktop::Main()
+     // Remember current context object
+     css::uno::ContextLayer layer( css::uno::getCurrentContext() );
+ 
++    fprintf(stderr, "DEBUG: checking bootstrap error status...\n"); fflush(stderr);
+     if ( m_aBootstrapError != BE_OK )
+     {
++        fprintf(stderr, "DEBUG: bootstrap error %d: %s\n", (int)m_aBootstrapError,
++                OUStringToOString(m_aBootstrapErrorMessage, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
+         HandleBootstrapErrors( m_aBootstrapError, m_aBootstrapErrorMessage );
+         return EXIT_FAILURE;
+     }
+ 
+     BootstrapStatus eStatus = GetBootstrapStatus();
+     if (eStatus == BS_TERMINATE) {
++        fprintf(stderr, "DEBUG: BS_TERMINATE, exiting\n"); fflush(stderr);
+         return EXIT_SUCCESS;
+     }
+ 
++    fprintf(stderr, "DEBUG: setting DesktopContext...\n"); fflush(stderr);
+     // Detect desktop environment - need to do this as early as possible
+     css::uno::setCurrentContext( new DesktopContext( css::uno::getCurrentContext() ) );
+ 
+-    if (officecfg::Office::Common::Misc::PreloadJVM::get() && pExecGlobals)
+-    {
+-        SAL_INFO("desktop.app", "Preload JVM");
+-
+-        // pre-load JVM
+-        pExecGlobals->xJVMloadThread = new JVMloadThread();
+-        pExecGlobals->xJVMloadThread->launch();
++    fprintf(stderr, "DEBUG: checking PreloadJVM config...\n"); fflush(stderr);
++    try {
++        if (officecfg::Office::Common::Misc::PreloadJVM::get() && pExecGlobals)
++        {
++            SAL_INFO("desktop.app", "Preload JVM");
++            pExecGlobals->xJVMloadThread = new JVMloadThread();
++            pExecGlobals->xJVMloadThread->launch();
++        }
++    } catch (const css::uno::Exception& e) {
++        fprintf(stderr, "DEBUG: PreloadJVM config failed (non-fatal): %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
+     }
+ 
+     CommandLineArgs& rCmdLineArgs = GetCommandLineArgs();
+ 
+     Translate::SetReadStringHook(ReplaceStringHookProc);
+ 
++    fprintf(stderr, "DEBUG: OpenSplashScreen...\n"); fflush(stderr);
+     // Startup screen
+ #if !ENABLE_WASM_STRIP_SPLASH
+     OpenSplashScreen();
+@@ -1361,7 +1416,9 @@ int Desktop::Main()
+     SetSplashScreenProgress(10);
+     recordTime(startT, "SetSplashScreenProgress(10): time = ");
+ 
++    fprintf(stderr, "DEBUG: userinstall::finalize...\n"); fflush(stderr);
+     userinstall::Status inst_fin = userinstall::finalize();
++    fprintf(stderr, "DEBUG: userinstall::finalize returned %d\n", (int)inst_fin); fflush(stderr);
+     if (inst_fin != userinstall::EXISTED && inst_fin != userinstall::CREATED)
+     {
+         SAL_WARN( "desktop.app", "userinstall failed: " << inst_fin);
+@@ -1380,10 +1437,20 @@ int Desktop::Main()
+ 
+     recordTime(startT, "SetSplashScreenProgress(20): time = ");
+ 
++    fprintf(stderr, "DEBUG: getProcessComponentContext...\n"); fflush(stderr);
+     const Reference< XComponentContext >& xContext = ::comphelper::getProcessComponentContext();
+ 
+-    Reference< XRestartManager > xRestartManager( OfficeRestartManager::get(xContext) );
++    fprintf(stderr, "DEBUG: OfficeRestartManager::get...\n"); fflush(stderr);
++    Reference< XRestartManager > xRestartManager;
++    try {
++        xRestartManager = OfficeRestartManager::get(xContext);
++    } catch (const css::uno::Exception& e) {
++        fprintf(stderr, "DEBUG: OfficeRestartManager failed (non-fatal): %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++    }
+ 
++    fprintf(stderr, "DEBUG: calling RegisterServices...\n"); fflush(stderr);
+     RegisterServices();
+ 
+     SetSplashScreenProgress(25);
+@@ -1391,6 +1458,7 @@ int Desktop::Main()
+     recordTime(startT, "SetSplashScreenProgress(25): time = ");
+ 
+ #if HAVE_FEATURE_DESKTOP && !defined(EMSCRIPTEN)
++    fprintf(stderr, "DEBUG: checking lockfile...\n"); fflush(stderr);
+     // check user installation directory for lockfile so we can be sure
+     // there is no other instance using our data files from a remote host
+ 
+@@ -1412,9 +1480,14 @@ int Desktop::Main()
+     if( rCmdLineArgs.IsTerminateAfterInit() )
+         return EXIT_SUCCESS;
+ 
++    fprintf(stderr, "DEBUG: InitializeConfiguration...\n"); fflush(stderr);
+     //  Read the common configuration items for optimization purpose
+     if ( !InitializeConfiguration() )
++    {
++        fprintf(stderr, "DEBUG: InitializeConfiguration FAILED\n"); fflush(stderr);
+         return EXIT_FAILURE;
++    }
++    fprintf(stderr, "DEBUG: InitializeConfiguration OK\n"); fflush(stderr);
+ 
+     SetSplashScreenProgress(30);
+ 
+@@ -1432,11 +1505,14 @@ int Desktop::Main()
+ 
+     recordTime(startT, "SetSplashScreenProgress(35): time = ");
+ 
++    fprintf(stderr, "DEBUG: SvtPathOptions...\n"); fflush(stderr);
+     pExecGlobals->pPathOptions.reset( new SvtPathOptions);
+     SetSplashScreenProgress(40);
+     recordTime(startT, "SetSplashScreenProgress(40): time = ");
+ 
++    fprintf(stderr, "DEBUG: Desktop::create...\n"); fflush(stderr);
+     Reference<XDesktop2> xDesktop = css::frame::Desktop::create(xContext);
++    fprintf(stderr, "DEBUG: Desktop::create OK\n"); fflush(stderr);
+ 
+ #if HAVE_FEATURE_UPDATE_MAR
+     if (!rCmdLineArgs.IsHeadless()
+@@ -1799,31 +1875,40 @@ IMPL_STATIC_LINK( Desktop, ImplInitFilterHdl, ::ConvertData&, rData, bool )
+ 
+ bool Desktop::InitializeConfiguration()
+ {
++    fprintf(stderr, "DEBUG: InitializeConfiguration: getting theDefaultProvider...\n"); fflush(stderr);
+     try
+     {
+         css::configuration::theDefaultProvider::get(
+             comphelper::getProcessComponentContext() );
++        fprintf(stderr, "DEBUG: InitializeConfiguration: theDefaultProvider OK\n"); fflush(stderr);
+         return true;
+     }
+     catch( css::lang::ServiceNotRegisteredException & e )
+     {
++        fprintf(stderr, "FATAL: config ServiceNotRegisteredException: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         HandleBootstrapErrors(
+             Desktop::BE_UNO_SERVICE_CONFIG_MISSING, e.Message );
+     }
+     catch( const css::configuration::MissingBootstrapFileException& e )
+     {
++        fprintf(stderr, "FATAL: MissingBootstrapFileException: %s\n",
++                OUStringToOString(e.BootstrapFileURL, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         OUString aMsg( CreateErrorMsgString( utl::Bootstrap::MISSING_BOOTSTRAP_FILE,
+                                                 e.BootstrapFileURL ));
+         HandleBootstrapPathErrors( ::utl::Bootstrap::INVALID_USER_INSTALL, aMsg );
+     }
+     catch( const css::configuration::InvalidBootstrapFileException& e )
+     {
++        fprintf(stderr, "FATAL: InvalidBootstrapFileException: %s\n",
++                OUStringToOString(e.BootstrapFileURL, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         OUString aMsg( CreateErrorMsgString( utl::Bootstrap::INVALID_BOOTSTRAP_FILE_ENTRY,
+                                                 e.BootstrapFileURL ));
+         HandleBootstrapPathErrors( ::utl::Bootstrap::INVALID_BASE_INSTALL, aMsg );
+     }
+     catch( const css::configuration::InstallationIncompleteException& )
+     {
++        fprintf(stderr, "FATAL: InstallationIncompleteException\n"); fflush(stderr);
+         OUString aVersionFileURL;
+         OUString aMsg;
+         utl::Bootstrap::PathStatus aPathStatus = utl::Bootstrap::locateVersionFile( aVersionFileURL );
+@@ -1836,26 +1921,27 @@ bool Desktop::InitializeConfiguration()
+     }
+     catch ( const css::configuration::backend::BackendAccessException& exception)
+     {
+-        // [cm122549] It is assumed in this case that the message
+-        // coming from InitConfiguration (in fact CreateApplicationConf...)
+-        // is suitable for display directly.
++        fprintf(stderr, "FATAL: BackendAccessException: %s\n",
++                OUStringToOString(exception.Message, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         FatalError( MakeStartupErrorMessage( exception.Message ) );
+     }
+     catch ( const css::configuration::backend::BackendSetupException& exception)
+     {
+-        // [cm122549] It is assumed in this case that the message
+-        // coming from InitConfiguration (in fact CreateApplicationConf...)
+-        // is suitable for display directly.
++        fprintf(stderr, "FATAL: BackendSetupException: %s\n",
++                OUStringToOString(exception.Message, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         FatalError( MakeStartupErrorMessage( exception.Message ) );
+     }
+     catch ( const css::configuration::CannotLoadConfigurationException& )
+     {
++        fprintf(stderr, "FATAL: CannotLoadConfigurationException\n"); fflush(stderr);
+         OUString aMsg( CreateErrorMsgString( utl::Bootstrap::INVALID_BOOTSTRAP_DATA,
+                                                 OUString() ));
+         HandleBootstrapPathErrors( ::utl::Bootstrap::INVALID_BASE_INSTALL, aMsg );
+     }
+-    catch( const css::uno::Exception& )
++    catch( const css::uno::Exception& e )
+     {
++        fprintf(stderr, "FATAL: InitializeConfiguration unknown exception: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr()); fflush(stderr);
+         OUString aMsg( CreateErrorMsgString( utl::Bootstrap::INVALID_BOOTSTRAP_DATA,
+                                                 OUString() ));
+         HandleBootstrapPathErrors( ::utl::Bootstrap::INVALID_BASE_INSTALL, aMsg );
 diff --git a/desktop/source/app/appinit.cxx b/desktop/source/app/appinit.cxx
-index 8f92acecb..7be0b9460 100644
+index 8f92acecb..25bf1ac6d 100644
 --- a/desktop/source/app/appinit.cxx
 +++ b/desktop/source/app/appinit.cxx
-@@ -19,6 +19,7 @@
+@@ -19,6 +19,8 @@
  
  
  #include <algorithm>
 +#include <iostream>
++#include <cstdio>
  #include <vector>
  
  #include <app.hxx>
-@@ -80,9 +81,15 @@ void Desktop::InitApplicationServiceManager()
+@@ -80,9 +82,15 @@ void Desktop::InitApplicationServiceManager()
             cppu::defaultBootstrap_InitialComponentContext( aUnoRc )->getServiceManager(),
             UNO_QUERY_THROW);
  #else
@@ -261,6 +469,52 @@ index 8f92acecb..7be0b9460 100644
  #endif
      comphelper::setProcessServiceFactory(sm);
  #if defined EMSCRIPTEN
+@@ -95,6 +103,8 @@ void Desktop::RegisterServices()
+     if( m_bServicesRegistered )
+         return;
+ 
++    fprintf(stderr, "DEBUG: RegisterServices() start\n"); fflush(stderr);
++
+     // interpret command line arguments
+     CommandLineArgs& rCmdLine = GetCommandLineArgs();
+ 
+@@ -102,11 +112,18 @@ void Desktop::RegisterServices()
+     if (rCmdLine.IsHeadless())
+         Application::EnableHeadlessMode(false);
+ 
++    fprintf(stderr, "DEBUG: reading ooSetupConnectionURL...\n"); fflush(stderr);
+     // read accept string from configuration
+-    OUString conDcpCfg(
+-        officecfg::Setup::Office::ooSetupConnectionURL::get());
+-    if (!conDcpCfg.isEmpty()) {
+-        createAcceptor(conDcpCfg);
++    try {
++        OUString conDcpCfg(
++            officecfg::Setup::Office::ooSetupConnectionURL::get());
++        if (!conDcpCfg.isEmpty()) {
++            createAcceptor(conDcpCfg);
++        }
++    } catch (const css::uno::Exception& e) {
++        fprintf(stderr, "DEBUG: ooSetupConnectionURL failed: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
+     }
+ 
+     std::vector< OUString > const & conDcp = rCmdLine.GetAccept();
+@@ -115,10 +132,13 @@ void Desktop::RegisterServices()
+         createAcceptor(elem);
+     }
+ 
++    fprintf(stderr, "DEBUG: configureUcb...\n"); fflush(stderr);
+     configureUcb();
+ 
++    fprintf(stderr, "DEBUG: CreateTemporaryDirectory...\n"); fflush(stderr);
+     CreateTemporaryDirectory();
+     m_bServicesRegistered = true;
++    fprintf(stderr, "DEBUG: RegisterServices() DONE\n"); fflush(stderr);
+ }
+ 
+ typedef std::map< OUString, css::uno::Reference<css::lang::XInitialization> > AcceptorMap;
 diff --git a/desktop/source/app/userinstall.cxx b/desktop/source/app/userinstall.cxx
 index 7243db43e..40298667b 100644
 --- a/desktop/source/app/userinstall.cxx
