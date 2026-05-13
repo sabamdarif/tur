@@ -683,3 +683,47 @@ index 58eec341a..e82907153 100644
      return true;
  }
  
+diff --git a/vcl/unx/gtk3/gtkinst.cxx b/vcl/unx/gtk3/gtkinst.cxx
+index a96789264..3700247fa 100644
+--- a/vcl/unx/gtk3/gtkinst.cxx
++++ b/vcl/unx/gtk3/gtkinst.cxx
+@@ -14,6 +14,7 @@
+ #include <stack>
+ #include <string.h>
+ #include <string_view>
++#include <cstdio>
+ 
+ #include <dndhelper.hxx>
+ #include <o3tl/test_info.hxx>
+@@ -227,17 +228,23 @@ GtkInstance::GtkInstance( std::unique_ptr<SalYieldMutex> pMutex )
+ //UI in a LTR locale
+ void GtkInstance::AfterAppInit()
+ {
++    fprintf(stderr, "DEBUG: GtkInstance::AfterAppInit -> EnsureInit()\n"); fflush(stderr);
+     EnsureInit();
++    fprintf(stderr, "DEBUG: GtkInstance::AfterAppInit done\n"); fflush(stderr);
+ }
+ 
+ void GtkInstance::EnsureInit()
+ {
+     if (!bNeedsInit)
+         return;
++    fprintf(stderr, "DEBUG: GtkInstance::EnsureInit starting...\n"); fflush(stderr);
+     // initialize SalData
+     GtkSalData *pSalData = GetGtkSalData();
++    fprintf(stderr, "DEBUG: GtkInstance::EnsureInit calling pSalData->Init()...\n"); fflush(stderr);
+     pSalData->Init();
++    fprintf(stderr, "DEBUG: GtkInstance::EnsureInit pSalData->Init() OK\n"); fflush(stderr);
+     GtkSalData::initNWF();
++    fprintf(stderr, "DEBUG: GtkInstance::EnsureInit initNWF OK\n"); fflush(stderr);
+ 
+     ImplSVData* pSVData = ImplGetSVData();
+ #ifdef GTK_TOOLKIT_NAME
+@@ -249,6 +256,7 @@ void GtkInstance::EnsureInit()
+ #endif
+ 
+     bNeedsInit = false;
++    fprintf(stderr, "DEBUG: GtkInstance::EnsureInit DONE\n"); fflush(stderr);
+ }
+ 
+ GtkInstance::~GtkInstance()
