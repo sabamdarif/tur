@@ -96,18 +96,28 @@ index ca70a91d3..1842088a4 100644
  }
  
 diff --git a/cppuhelper/source/exc_thrower.cxx b/cppuhelper/source/exc_thrower.cxx
-index db2c9b0d5..28675cb19 100644
+index db2c9b0d5..f05d8a5c4 100644
 --- a/cppuhelper/source/exc_thrower.cxx
 +++ b/cppuhelper/source/exc_thrower.cxx
-@@ -255,7 +255,7 @@ void SAL_CALL throwException( Any const & exc )
+@@ -20,6 +20,7 @@
+ #include <rtl/instance.hxx>
+ #include <osl/diagnose.h>
+ #include <sal/log.hxx>
++#include <cstdio>
+ #include <uno/dispatcher.hxx>
+ #include <uno/lbnames.h>
+ #include <uno/mapping.hxx>
+@@ -254,6 +255,10 @@ void SAL_CALL throwException( Any const & exc )
+ 
  Any SAL_CALL getCaughtException()
  {
++#if defined(__ANDROID__)
++    // On Termux/bionic, try the normal bridge path but log failures
++    fprintf(stderr, "DEBUG: getCaughtException() called\n"); fflush(stderr);
++#endif
      // why does this differ from RETHROW_FAKE_EXCEPTIONS?
--#if defined(ANDROID)
-+#if defined(ANDROID) || defined(__ANDROID__)
+ #if defined(ANDROID)
      return Any();
- #else
-     Mapping cpp2uno(Environment::getCurrent(), Environment(u"" UNO_LB_UNO ""_ustr));
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
 index da313a19a..1a80b27db 100644
 --- a/desktop/source/app/app.cxx
