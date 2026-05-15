@@ -610,6 +610,67 @@ index 8f92acecb..25bf1ac6d 100644
  }
  
  typedef std::map< OUString, css::uno::Reference<css::lang::XInitialization> > AcceptorMap;
+diff --git a/desktop/source/app/check_ext_deps.cxx b/desktop/source/app/check_ext_deps.cxx
+index 90446384f..051e1f5f4 100644
+--- a/desktop/source/app/check_ext_deps.cxx
++++ b/desktop/source/app/check_ext_deps.cxx
+@@ -19,6 +19,7 @@
+ 
+ #include <config_folders.h>
+ #include <config_features.h>
++#include <cstdio>
+ 
+ #include <rtl/bootstrap.hxx>
+ #include <rtl/ustring.hxx>
+@@ -406,21 +407,36 @@ void Desktop::SynchronizeExtensionRepositories(bool bCleanedExtensionCache, Desk
+         comphelper::getProcessComponentContext());
+     uno::Reference< ucb::XCommandEnvironment > silent(
+         new SilentCommandEnv(context, pDesktop));
+-    if (bCleanedExtensionCache) {
+-        deployment::ExtensionManager::get(context)->reinstallDeployedExtensions(
+-            true, u"user"_ustr, Reference<task::XAbortChannel>(), silent);
++    try {
++        if (bCleanedExtensionCache) {
++            deployment::ExtensionManager::get(context)->reinstallDeployedExtensions(
++                true, u"user"_ustr, Reference<task::XAbortChannel>(), silent);
+ #if !HAVE_FEATURE_MACOSX_SANDBOX
+-        if (!comphelper::LibreOfficeKit::isActive())
+-            task::OfficeRestartManager::get(context)->requestRestart(
+-                silent->getInteractionHandler());
++            if (!comphelper::LibreOfficeKit::isActive())
++                task::OfficeRestartManager::get(context)->requestRestart(
++                    silent->getInteractionHandler());
+ #endif
+-    } else {
+-        // reinstallDeployedExtensions above already calls syncRepositories internally
++        } else {
++            // reinstallDeployedExtensions above already calls syncRepositories internally
+ 
+-        // Force syncing repositories on startup. There are cases where the extension
+-        // registration becomes invalid which leads to extensions not starting up, although
+-        // installed and active. Syncing extension repos on startup fixes that.
+-        dp_misc::syncRepositories(/*force=*/true, silent);
++            // Force syncing repositories on startup. There are cases where the extension
++            // registration becomes invalid which leads to extensions not starting up, although
++            // installed and active. Syncing extension repos on startup fixes that.
++            dp_misc::syncRepositories(/*force=*/true, silent);
++        }
++    } catch (const deployment::DeploymentException& e) {
++        // Non-fatal: extension infrastructure may not be set up on first run (e.g. Termux).
++        // Log and continue — extensions are not required for basic office functionality.
++        OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
++        fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: DeploymentException (non-fatal): %s\n", sMsg.getStr());
++        fflush(stderr);
++    } catch (const ucb::CommandAbortedException&) {
++        // User aborted, non-fatal
++        fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: aborted by user\n"); fflush(stderr);
++    } catch (const uno::Exception& e) {
++        OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
++        fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: UNO exception (non-fatal): %s\n", sMsg.getStr());
++        fflush(stderr);
+     }
+ }
+ 
 diff --git a/desktop/source/app/userinstall.cxx b/desktop/source/app/userinstall.cxx
 index 7243db43e..04db4664b 100644
 --- a/desktop/source/app/userinstall.cxx
