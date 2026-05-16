@@ -1,0 +1,30 @@
+--- a/desktop/source/app/sofficemain.cxx        2026-04-24 15:21:51.000000000 -0400
++++ b/desktop/source/app/sofficemain.cxx        2026-05-16 08:07:44.807999533 -0400
+@@ -68,11 +68,8 @@
+ #if HAVE_FEATURE_BREAKPAD
+     CrashReporter::installExceptionHandler();
+ #endif
+-
+-#if defined ANDROID
+-    try {
+-        rtl::Bootstrap::setIniFilename("file:///assets/program/lofficerc");
+-#endif
++    // Set correct ini filename for Termux
++    rtl::Bootstrap::setIniFilename("file://${TERMUX_PREFIX}/lib/libreoffice/program/sofficerc");
+     tools::extendApplicationEnvironment();
+ 
+ #if defined EMSCRIPTEN && !HAVE_EMSCRIPTEN_JSPI
+@@ -120,13 +117,6 @@
+     }
+ 
+     return SVMain();
+-#if defined ANDROID
+-    } catch (const css::uno::Exception &e) {
+-        LOGI("Unhandled UNO exception: '%s'",
+-             OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
+-        throw; // to get exception type printed
+-    }
+-#endif
+ }
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
