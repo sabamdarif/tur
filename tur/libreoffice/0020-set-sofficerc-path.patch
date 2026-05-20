@@ -1,30 +1,47 @@
---- a/desktop/source/app/sofficemain.cxx        2026-04-24 15:21:51.000000000 -0400
-+++ b/desktop/source/app/sofficemain.cxx        2026-05-16 08:07:44.807999533 -0400
-@@ -68,11 +68,8 @@
- #if HAVE_FEATURE_BREAKPAD
+--- a/desktop/source/app/sofficemain.cxx	2026-04-24 15:21:51.000000000 -0400
++++ b/desktop/source/app/sofficemain.cxx	2026-05-17 20:47:55.551949175 -0400
+@@ -46,13 +46,13 @@
+ 
+ #include <postwin.h>
+ 
+-#ifdef ANDROID
++#ifdef __ANDROID__
+ #  include <jni.h>
+-#  include <android/log.h>
+ #  include <salhelper/thread.hxx>
++//#  include <android/log.h>
+ 
+-#  define LOGTAG "LibreOffice/sofficemain"
+-#  define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOGTAG, __VA_ARGS__))
++//#  define LOGTAG "LibreOffice/sofficemain"
++//#  define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOGTAG, __VA_ARGS__))
+ #endif
+ 
+ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
+@@ -69,9 +69,10 @@
      CrashReporter::installExceptionHandler();
  #endif
--
+ 
 -#if defined ANDROID
--    try {
++#if defined __ANDROID__
+     try {
 -        rtl::Bootstrap::setIniFilename("file:///assets/program/lofficerc");
--#endif
-+    // Set correct ini filename for Termux
-+    rtl::Bootstrap::setIniFilename("file://${TERMUX_PREFIX}/lib/libreoffice/program/sofficerc");
++        // Set correct ini filename for Termux
++        rtl::Bootstrap::setIniFilename("file:///data/data/com.termux/files/usr/lib/libreoffice/program/sofficerc");
+ #endif
      tools::extendApplicationEnvironment();
  
- #if defined EMSCRIPTEN && !HAVE_EMSCRIPTEN_JSPI
-@@ -120,13 +117,6 @@
+@@ -120,10 +121,10 @@
      }
  
      return SVMain();
 -#if defined ANDROID
--    } catch (const css::uno::Exception &e) {
++#if defined __ANDROID__
+     } catch (const css::uno::Exception &e) {
 -        LOGI("Unhandled UNO exception: '%s'",
 -             OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
--        throw; // to get exception type printed
--    }
--#endif
- }
- 
- /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
++        //LOGI("Unhandled UNO exception: '%s'",
++        //     OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
+         throw; // to get exception type printed
+     }
+ #endif

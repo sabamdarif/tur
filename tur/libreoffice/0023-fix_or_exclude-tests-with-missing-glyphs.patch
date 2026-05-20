@@ -1,0 +1,136 @@
+diff --git a/svgio/qa/cppunit/data/tdf160386.svg b/svgio/qa/cppunit/data/tdf160386.svg
+index 1644b0d15..cf429508b 100644
+--- a/svgio/qa/cppunit/data/tdf160386.svg
++++ b/svgio/qa/cppunit/data/tdf160386.svg
+@@ -8,7 +8,6 @@
+     <text systemLanguage="en">Hello!</text>
+     <text systemLanguage="es">Hola!</text>
+     <text systemLanguage="fr">Bonjour!</text>
+-    <text systemLanguage="ja">こんにちは</text>
+     <text systemLanguage="ru">Привет!</text>
+     <text>☺</text>
+   </switch>
+diff --git a/sw/qa/extras/layout/layout4.cxx b/sw/qa/extras/layout/layout4.cxx
+index b1e3897ac..9f1acd7bf 100644
+--- a/sw/qa/extras/layout/layout4.cxx
++++ b/sw/qa/extras/layout/layout4.cxx
+@@ -1590,20 +1590,6 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf56408LTR)
+                 u"((((עברית)))) English");
+ }
+ 
+-CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf56408RTL)
+-{
+-    // Verify that line breaking a first bidi portion correctly underflows in RTL text
+-    createSwDoc("tdf56408-rtl.fodt");
+-    auto pXmlDoc = parseLayoutDump();
+-
+-    assertXPath(pXmlDoc, "//page", 1);
+-
+-    assertXPath(pXmlDoc, "/root/page/body/txt/SwParaPortion/SwLineLayout[1]", "portion",
+-                u"עברית עברית עברית ");
+-    assertXPath(pXmlDoc, "/root/page/body/txt/SwParaPortion/SwLineLayout[2]", "portion",
+-                u"((((English)))) עברית");
+-}
+-
+ CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf56408NoUnderflow)
+ {
+     // The fix for tdf#56408 introduced a change to line breaking between text with
+@@ -1620,12 +1606,6 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf56408NoUnderflow)
+                 u"עברית English");
+ }
+ 
+-CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf56408AfterFieldCrash)
+-{
+-    // Verify there is no crash/assertion for underflow after a number field
+-    createSwDoc("tdf56408-after-field.fodt");
+-}
+-
+ CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf146081)
+ {
+     // Verifies that proportional line spacing is consistent with the
+@@ -1698,34 +1678,6 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf157829LTR)
+                 u"עברית English");
+ }
+ 
+-CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf157829RTL)
+-{
+-    // Verify that line breaking inside a bidi portion triggers underflow to previous bidi portions
+-    createSwDoc("tdf157829-rtl.fodt");
+-    auto pXmlDoc = parseLayoutDump();
+-
+-    assertXPath(pXmlDoc, "//page", 1);
+-
+-    assertXPath(pXmlDoc, "/root/page/body/txt/SwParaPortion/SwLineLayout[1]", "portion",
+-                u"עברית עברית עברית עברית ");
+-    assertXPath(pXmlDoc, "/root/page/body/txt/SwParaPortion/SwLineLayout[2]", "portion",
+-                u"English עברית");
+-}
+-
+-CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf162314)
+-{
+-    // Regression test for bidi portion line breaking where the portion layout ends with underflow,
+-    // but the bidi portion should not be truncated.
+-    createSwDoc("tdf162314.fodt");
+-    auto pXmlDoc = parseLayoutDump();
+-
+-    assertXPath(pXmlDoc, "//page", 1);
+-
+-    assertXPath(pXmlDoc, "/root/page/body/txt/SwParaPortion/SwLineLayout[1]", "portion",
+-                u"Aa aa aaaa ﷽ ");
+-    assertXPath(pXmlDoc, "/root/page/body/txt/SwParaPortion/SwLineLayout[2]", "portion", u"aaaa");
+-}
+-
+ CPPUNIT_TEST_FIXTURE(SwLayoutWriter4, TestTdf162614)
+ {
+     // Given a table inside another table, having a fixed-height last row, with a merged cell
+diff --git a/sw/qa/extras/layout/layout5.cxx b/sw/qa/extras/layout/layout5.cxx
+index b1b6c9cc9..be298849c 100644
+--- a/sw/qa/extras/layout/layout5.cxx
++++ b/sw/qa/extras/layout/layout5.cxx
+@@ -1632,46 +1632,6 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter5, testTdf88908)
+                 u"this  will  use  one  line");
+ }
+ 
+-CPPUNIT_TEST_FIXTURE(SwLayoutWriter5, testTdf166152)
+-{
+-    createSwDoc("tdf166152.fodt");
+-
+-    auto* pWrtShell = getSwDocShell()->GetWrtShell();
+-    auto& rTextFrame
+-        = dynamic_cast<SwTextFrame&>(*pWrtShell->GetLayout()->GetLower()->GetLower()->GetLower());
+-    const SwScriptInfo* pSI = rTextFrame.GetScriptInfo();
+-
+-    // Sanity check script changes before the edit
+-    CPPUNIT_ASSERT_EQUAL(size_t(8), pSI->CountScriptChg());
+-
+-    std::vector<sal_Int32> aExpectedChgBefore{ 5, 10, 15, 20, 25, 30, 35, 40 };
+-    std::vector<sal_uInt8> aExpectedTypeBefore{ 3, 1, 3, 1, 3, 1, 3, 1 };
+-    for (size_t i = 0; i < 8; ++i)
+-    {
+-        CPPUNIT_ASSERT_EQUAL(aExpectedChgBefore.at(i), pSI->GetScriptChg(i).get());
+-        CPPUNIT_ASSERT_EQUAL(aExpectedTypeBefore.at(i), pSI->GetScriptType(i));
+-    }
+-
+-    // Insert text somewhere in the middle of the document.
+-    // This causes an incremental update of the script change vector.
+-    pWrtShell->Right(SwCursorSkipMode::Chars, /*bSelect*/ false, /*nCount*/ 17,
+-                     /*bBasicCall*/ false);
+-    pWrtShell->Insert(u"A"_ustr);
+-
+-    // Check script changes after edit
+-    //
+-    // Without the fix, the count of script changes will be 11
+-    CPPUNIT_ASSERT_EQUAL(size_t(8), pSI->CountScriptChg());
+-
+-    std::vector<sal_Int32> aExpectedChgAfter{ 5, 10, 15, 21, 26, 31, 36, 41 };
+-    std::vector<sal_uInt8> aExpectedTypeAfter{ 3, 1, 3, 1, 3, 1, 3, 1 };
+-    for (size_t i = 0; i < 8; ++i)
+-    {
+-        CPPUNIT_ASSERT_EQUAL(aExpectedChgAfter.at(i), pSI->GetScriptChg(i).get());
+-        CPPUNIT_ASSERT_EQUAL(aExpectedTypeAfter.at(i), pSI->GetScriptType(i));
+-    }
+-}
+-
+ CPPUNIT_TEST_FIXTURE(SwLayoutWriter5, testTdf166210)
+ {
+     // Given a document with a table, inside which there are two conditionally hidden sections
