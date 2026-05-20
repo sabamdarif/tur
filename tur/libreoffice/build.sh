@@ -9,7 +9,7 @@ TERMUX_PKG_SHA256=5b80ec8ed6726479e0f033c08c38f9df36fa20b15c575378d75ba0c373f154
 # TODO: to be added compared to Archlinux deps="neon, gcc-libs, sh, libetonyek, glib2, glibc"
 # TODO/FIXME: xdg-utils is unsafe for on device build
 TERMUX_PKG_DEPENDS="abseil-cpp, argon2, bison, boost, clucene, cups, curl, dbus, desktop-file-utils, fontconfig, freetype, glib, glm, gpgme, gst-plugins-base, gstreamer, harfbuzz-icu, hicolor-icon-theme, hunspell, libabw, libatomic-ops, libcairo, libcdr, libcmis, libcurl, libe-book, libepoxy, libepubgen, libexpat, libexttextcat, libfreehand, libglvnd, libgraphite, libhyphen, libicu, libjpeg-turbo, liblangtag, libmspub, libmwaw, libnspr, libnss, libnumbertext, libodfgen, liborcus, libpagemaker, libpng, libqxp, libraptor2, librevenge, libstaroffice, libtiff, libtommath, libvisio, libwebp, libwpd, libwps, libx11, libxext, libxinerama, libxml2, libxrandr, libxslt, libzmf, libzxing-cpp, littlecms, lpsolve, openjpeg, openldap, openssl, pango, poppler, python, redland, shared-mime-info, which, xmlsec, zlib"
-TERMUX_PKG_BUILD_DEPENDS="boost-headers, gtk4, gtk3, qt6-qtbase, openjdk-25, openjdk-25-x, postgresql, unixodbc, mariadb, libc++"
+TERMUX_PKG_BUILD_DEPENDS="boost-headers, gtk4, gtk3, qt6-qtbase, postgresql, unixodbc, mariadb, libc++"
 TERMUX_PKG_BUILD_IN_SRC=true
 TERMUX_PKG_MAKE_INSTALL_TARGET="distro-pack-install"
 # TODO: remove --disable-skia, some vulkan related compilation error I couldn't solve.
@@ -75,7 +75,7 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --with-system-libzmf
 --with-system-gpgmepp
 --with-system-libstaroffice
---with-jdk-home=$TERMUX_PREFIX/lib/jvm/java-25-openjdk
+--without-java
 --with-ant-home=$TERMUX_PREFIX/share/ant
 --with-system-boost
 --with-system-icu
@@ -131,13 +131,13 @@ termux_step_pre_configure() {
 	# Without explicit linkage the Termux symbol checker flags them as undefined.
 	if [ "$TERMUX_ARCH" = "arm" ] || [ "$TERMUX_ARCH" = "i686" ]; then
 		export LDFLAGS="${LDFLAGS} -lgcc"
+		export CMAKE_SHARED_LINKER_FLAGS="-lgcc"
+		export CMAKE_EXE_LINKER_FLAGS="-lgcc"
 	fi
-
 	# Ensure meson and ninja are available for CONF-FOR-BUILD (host)
 	# which needs them to build internal harfbuzz
 	termux_setup_meson
 	termux_setup_ninja
-
 
 	# Remove setup.cfg so Termux doesn't treat this as a Python package
 	# and try 'pip install .' during the install step
@@ -186,3 +186,15 @@ termux_step_configure() {
 termux_step_make() {
 	make -j $(nproc)
 }
+
+# termux_step_post_massage() {
+# Disable extension synchronization on startup.
+# The extension manager throws DeploymentException during the forced sync
+# on Termux because the deployment infrastructure (shared extension repos,
+# cached registry ini files) doesn't exist on a fresh install. Since there
+# are no bundled extensions in the Termux package, this sync is a no-op
+# anyway. LibreOffice has a built-in escape hatch via this bootstrap variable.
+# echo "" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
+# echo "# Termux: disable extension sync on startup (no bundled extensions)" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
+# echo "DISABLE_EXTENSION_SYNCHRONIZATION=1" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
+# }
