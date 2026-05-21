@@ -119,10 +119,18 @@ index db2c9b0d5..f05d8a5c4 100644
  #if defined(ANDROID)
      return Any();
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
-index da313a19a..1643aaf4e 100644
+index 32bcb8c01..0a7d972d3 100644
 --- a/desktop/source/app/app.cxx
 +++ b/desktop/source/app/app.cxx
-@@ -150,6 +150,7 @@
+@@ -52,6 +52,7 @@
+ #include <svl/ctloptions.hxx>
+ #include <svtools/javacontext.hxx>
+ #include <com/sun/star/beans/XPropertySet.hpp>
++#include <com/sun/star/deployment/DeploymentException.hpp>
+ #include <com/sun/star/frame/theAutoRecovery.hpp>
+ #include <com/sun/star/frame/theGlobalEventBroadcaster.hpp>
+ #include <com/sun/star/frame/SessionListener.hpp>
+@@ -150,6 +151,7 @@
  #define GETPID _getpid
  #else
  #include <unistd.h>
@@ -130,7 +138,7 @@ index da313a19a..1643aaf4e 100644
  #define GETPID getpid
  #endif
  
-@@ -474,14 +475,20 @@ void Desktop::Init()
+@@ -474,14 +476,20 @@ void Desktop::Init()
      // something to enforce this gotcha
      try
      {
@@ -151,7 +159,7 @@ index da313a19a..1643aaf4e 100644
      // Check whether safe mode is enabled
      const CommandLineArgs& rCmdLineArgs = GetCommandLineArgs();
      // Check if we are restarting from safe mode - in that case we don't want to enter it again
-@@ -490,19 +497,45 @@ void Desktop::Init()
+@@ -490,19 +498,45 @@ void Desktop::Init()
      else if (rCmdLineArgs.IsSafeMode() || sfx2::SafeMode::hasFlag())
          Application::EnableSafeMode();
  
@@ -201,7 +209,7 @@ index da313a19a..1643aaf4e 100644
      try
      {
          if (!langselect::prepareLocale())
-@@ -512,9 +545,14 @@ void Desktop::Init()
+@@ -512,9 +546,14 @@ void Desktop::Init()
      }
      catch (css::uno::Exception & e)
      {
@@ -216,7 +224,7 @@ index da313a19a..1643aaf4e 100644
      // test code for ProfileSafeMode to allow testing the fail
      // of loading the office configuration initially. To use,
      // either set to true and compile, or set a breakpoint
-@@ -526,12 +564,15 @@ void Desktop::Init()
+@@ -526,12 +565,15 @@ void Desktop::Init()
          SetBootstrapError(BE_OFFICECONFIG_BROKEN, OUString());
      }
  
@@ -232,7 +240,7 @@ index da313a19a..1643aaf4e 100644
  #else
          // Keep using this oddly named BE_PATHINFO_MISSING value
          // for pipe-related errors on other platforms. Of course
-@@ -562,6 +603,7 @@ void Desktop::Init()
+@@ -562,6 +604,7 @@ void Desktop::Init()
          RequestHandler::Disable();
      }
      pSignalHandler = osl_addSignalHandler(SalMainPipeExchangeSignal_impl, nullptr);
@@ -240,7 +248,7 @@ index da313a19a..1643aaf4e 100644
  
  #if HAVE_EMSCRIPTEN_PROXY_POSIX_SOCKETS
      {
-@@ -1301,6 +1343,7 @@ static ExecuteGlobals* pExecGlobals = nullptr;
+@@ -1299,6 +1342,7 @@ static ExecuteGlobals* pExecGlobals = nullptr;
  static std::chrono::high_resolution_clock::time_point startFuncTp;
  int Desktop::Main()
  {
@@ -248,7 +256,7 @@ index da313a19a..1643aaf4e 100644
      std::chrono::high_resolution_clock::time_point startT;
  
  #ifdef SAL_LOG_INFO
-@@ -1326,33 +1369,45 @@ int Desktop::Main()
+@@ -1324,33 +1368,45 @@ int Desktop::Main()
      // Remember current context object
      css::uno::ContextLayer layer( css::uno::getCurrentContext() );
  
@@ -301,7 +309,7 @@ index da313a19a..1643aaf4e 100644
      // Startup screen
  #if !ENABLE_WASM_STRIP_SPLASH
      OpenSplashScreen();
-@@ -1361,7 +1416,9 @@ int Desktop::Main()
+@@ -1359,7 +1415,9 @@ int Desktop::Main()
      SetSplashScreenProgress(10);
      recordTime(startT, "SetSplashScreenProgress(10): time = ");
  
@@ -311,7 +319,7 @@ index da313a19a..1643aaf4e 100644
      if (inst_fin != userinstall::EXISTED && inst_fin != userinstall::CREATED)
      {
          SAL_WARN( "desktop.app", "userinstall failed: " << inst_fin);
-@@ -1380,10 +1437,20 @@ int Desktop::Main()
+@@ -1378,10 +1436,20 @@ int Desktop::Main()
  
      recordTime(startT, "SetSplashScreenProgress(20): time = ");
  
@@ -333,7 +341,7 @@ index da313a19a..1643aaf4e 100644
      RegisterServices();
  
      SetSplashScreenProgress(25);
-@@ -1391,6 +1458,7 @@ int Desktop::Main()
+@@ -1389,6 +1457,7 @@ int Desktop::Main()
      recordTime(startT, "SetSplashScreenProgress(25): time = ");
  
  #if HAVE_FEATURE_DESKTOP && !defined(EMSCRIPTEN)
@@ -341,7 +349,7 @@ index da313a19a..1643aaf4e 100644
      // check user installation directory for lockfile so we can be sure
      // there is no other instance using our data files from a remote host
  
-@@ -1412,9 +1480,14 @@ int Desktop::Main()
+@@ -1410,9 +1479,14 @@ int Desktop::Main()
      if( rCmdLineArgs.IsTerminateAfterInit() )
          return EXIT_SUCCESS;
  
@@ -356,7 +364,7 @@ index da313a19a..1643aaf4e 100644
  
      SetSplashScreenProgress(30);
  
-@@ -1432,11 +1505,14 @@ int Desktop::Main()
+@@ -1430,11 +1504,14 @@ int Desktop::Main()
  
      recordTime(startT, "SetSplashScreenProgress(35): time = ");
  
@@ -371,7 +379,7 @@ index da313a19a..1643aaf4e 100644
  
  #if HAVE_FEATURE_UPDATE_MAR
      if (!rCmdLineArgs.IsHeadless()
-@@ -1519,37 +1595,49 @@ int Desktop::Main()
+@@ -1517,37 +1594,72 @@ int Desktop::Main()
  #endif
  
      // create service for loading SFX (still needed in startup)
@@ -393,10 +401,35 @@ index da313a19a..1643aaf4e 100644
      // Check if bundled or shared extensions were added /removed
      // and process those extensions (has to be done before checking
      // the extension dependencies!
+-    SynchronizeExtensionRepositories(m_bCleanedExtensionCache, this);
+-    bool bAbort = CheckExtensionDependencies();
 +    fprintf(stderr, "DEBUG: Desktop::Main() SynchronizeExtensionRepositories...\n"); fflush(stderr);
-     SynchronizeExtensionRepositories(m_bCleanedExtensionCache, this);
++    try {
++        SynchronizeExtensionRepositories(m_bCleanedExtensionCache, this);
++    } catch (const css::deployment::DeploymentException& e) {
++        OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
++        fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: DeploymentException (non-fatal): %s\n", sMsg.getStr());
++        fflush(stderr);
++    } catch (const css::uno::Exception& e) {
++        OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
++        fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: UNO exception (non-fatal): %s\n", sMsg.getStr());
++        fflush(stderr);
++    }
 +    fprintf(stderr, "DEBUG: Desktop::Main() SynchronizeExtensionRepositories OK\n"); fflush(stderr);
-     bool bAbort = CheckExtensionDependencies();
++    fprintf(stderr, "DEBUG: Desktop::Main() CheckExtensionDependencies...\n"); fflush(stderr);
++    bool bAbort = false;
++    try {
++        bAbort = CheckExtensionDependencies();
++    } catch (const css::deployment::DeploymentException& e) {
++        OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
++        fprintf(stderr, "WARNING: CheckExtensionDependencies: DeploymentException (non-fatal): %s\n", sMsg.getStr());
++        fflush(stderr);
++    } catch (const css::uno::Exception& e) {
++        OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
++        fprintf(stderr, "WARNING: CheckExtensionDependencies: UNO exception (non-fatal): %s\n", sMsg.getStr());
++        fflush(stderr);
++    }
++    fprintf(stderr, "DEBUG: Desktop::Main() CheckExtensionDependencies OK (abort=%d)\n", bAbort); fflush(stderr);
      if ( bAbort )
          return EXIT_FAILURE;
  
@@ -421,7 +454,7 @@ index da313a19a..1643aaf4e 100644
  
      SetSplashScreenProgress(50);
      recordTime(startT, "SetSplashScreenProgress(50): time = ");
-@@ -1559,7 +1647,9 @@ int Desktop::Main()
+@@ -1557,7 +1669,9 @@ int Desktop::Main()
      bool bExistsRecoveryData = false;
      bool bExistsSessionData  = false;
  
@@ -431,7 +464,7 @@ index da313a19a..1643aaf4e 100644
  
      OUString pidfileName = rCmdLineArgs.GetPidfileName();
      if ( !pidfileName.isEmpty() )
-@@ -1602,18 +1692,24 @@ int Desktop::Main()
+@@ -1600,18 +1714,24 @@ int Desktop::Main()
              (!bExistsSessionData                                                   ) &&
              (!Application::AnyInput( VclInputFlags::APPEVENT )                          ))
          {
@@ -456,7 +489,7 @@ index da313a19a..1643aaf4e 100644
      SetSplashScreenProgress(60);
      recordTime(startT, "SetSplashScreenProgress(60): time = ");
  
-@@ -1799,31 +1895,40 @@ IMPL_STATIC_LINK( Desktop, ImplInitFilterHdl, ::ConvertData&, rData, bool )
+@@ -1797,31 +1917,40 @@ IMPL_STATIC_LINK( Desktop, ImplInitFilterHdl, ::ConvertData&, rData, bool )
  
  bool Desktop::InitializeConfiguration()
  {
@@ -497,7 +530,7 @@ index da313a19a..1643aaf4e 100644
          OUString aVersionFileURL;
          OUString aMsg;
          utl::Bootstrap::PathStatus aPathStatus = utl::Bootstrap::locateVersionFile( aVersionFileURL );
-@@ -1836,26 +1941,27 @@ bool Desktop::InitializeConfiguration()
+@@ -1834,26 +1963,27 @@ bool Desktop::InitializeConfiguration()
      }
      catch ( const css::configuration::backend::BackendAccessException& exception)
      {
