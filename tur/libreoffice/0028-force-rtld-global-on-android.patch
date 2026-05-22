@@ -1,0 +1,30 @@
+From 951fba0a079d3d886ad1573a1d55a8599e85933a Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Fri, 22 May 2026 21:39:13 +0530
+Subject: [PATCH] force-rtld-global-on-android
+
+---
+ sal/osl/unx/module.cxx | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/sal/osl/unx/module.cxx b/sal/osl/unx/module.cxx
+index 0da54f475..33ffb731a 100644
+--- a/sal/osl/unx/module.cxx
++++ b/sal/osl/unx/module.cxx
+@@ -94,7 +94,13 @@ oslModule SAL_CALL osl_loadModuleAscii(const char *pModuleName, sal_Int32 nRtldM
+     {
+         int rtld_mode =
+             ((nRtldMode & SAL_LOADMODULE_NOW) ? RTLD_NOW : RTLD_LAZY) |
++#if defined(__ANDROID__)
++            // On Android/Bionic, always use RTLD_GLOBAL to ensure RTTI/type_info
++            // symbols are merged across dynamically loaded UNO components.
++            RTLD_GLOBAL;
++#else
+             ((nRtldMode & SAL_LOADMODULE_GLOBAL) ? RTLD_GLOBAL : RTLD_LOCAL);
++#endif
+         void* pLib = dlopen(pModuleName, rtld_mode);
+ 
+         SAL_WARN_IF(
+-- 
+2.54.0
+

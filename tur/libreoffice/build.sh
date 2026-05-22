@@ -187,14 +187,14 @@ termux_step_make() {
 	make -j $(nproc)
 }
 
-# termux_step_post_massage() {
-# Disable extension synchronization on startup.
-# The extension manager throws DeploymentException during the forced sync
-# on Termux because the deployment infrastructure (shared extension repos,
-# cached registry ini files) doesn't exist on a fresh install. Since there
-# are no bundled extensions in the Termux package, this sync is a no-op
-# anyway. LibreOffice has a built-in escape hatch via this bootstrap variable.
-# echo "" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
-# echo "# Termux: disable extension sync on startup (no bundled extensions)" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
-# echo "DISABLE_EXTENSION_SYNCHRONIZATION=1" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
-# }
+termux_step_post_massage() {
+	# Disable extension synchronization on startup.
+	# The extension manager throws DeploymentException during the forced sync
+	# on Termux because the deployment infrastructure (shared extension repos,
+	# cached registry ini files) doesn't exist on a fresh install. Since there
+	# are no bundled extensions in the Termux package, this sync is a no-op
+	# anyway. LibreOffice has a built-in escape hatch via this bootstrap variable.
+	echo "" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
+	echo "# Termux: disable extension sync on startup (no bundled extensions)" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
+	echo "DISABLE_EXTENSION_SYNCHRONIZATION=1" >> "$TERMUX_PREFIX/lib/libreoffice/program/unorc"
+}
