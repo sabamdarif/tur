@@ -1,0 +1,63 @@
+From ba944dd952f0642a90fcbc1375a6cdb7c9be5ce6 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Sun, 24 May 2026 16:47:08 +0530
+Subject: [PATCH] skip-extension-system-on-android
+
+---
+ desktop/source/app/app.cxx | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index 0a7d972d3..5373589fb 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -1612,6 +1612,14 @@ int Desktop::Main()
+     // Check if bundled or shared extensions were added /removed
+     // and process those extensions (has to be done before checking
+     // the extension dependencies!
++#if defined(__ANDROID__)
++    // On Termux/Android, skip extension sync and dependency check entirely.
++    // The extension manager throws DeploymentException which cannot be caught
++    // due to RTTI/typeinfo fragmentation across Bionic's dlopen namespaces.
++    // Since Termux packages have no bundled extensions, this is safe to skip.
++    fprintf(stderr, "DEBUG: Desktop::Main() Skipping extension sync/check on Android\n"); fflush(stderr);
++    bool bAbort = false;
++#else
+     fprintf(stderr, "DEBUG: Desktop::Main() SynchronizeExtensionRepositories...\n"); fflush(stderr);
+     try {
+         SynchronizeExtensionRepositories(m_bCleanedExtensionCache, this);
+@@ -1623,6 +1631,9 @@ int Desktop::Main()
+         OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
+         fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: UNO exception (non-fatal): %s\n", sMsg.getStr());
+         fflush(stderr);
++    } catch (...) {
++        fprintf(stderr, "WARNING: SynchronizeExtensionRepositories: unknown exception (non-fatal)\n");
++        fflush(stderr);
+     }
+     fprintf(stderr, "DEBUG: Desktop::Main() SynchronizeExtensionRepositories OK\n"); fflush(stderr);
+     fprintf(stderr, "DEBUG: Desktop::Main() CheckExtensionDependencies...\n"); fflush(stderr);
+@@ -1637,8 +1648,12 @@ int Desktop::Main()
+         OString sMsg = OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8);
+         fprintf(stderr, "WARNING: CheckExtensionDependencies: UNO exception (non-fatal): %s\n", sMsg.getStr());
+         fflush(stderr);
++    } catch (...) {
++        fprintf(stderr, "WARNING: CheckExtensionDependencies: unknown exception (non-fatal)\n");
++        fflush(stderr);
+     }
+     fprintf(stderr, "DEBUG: Desktop::Main() CheckExtensionDependencies OK (abort=%d)\n", bAbort); fflush(stderr);
++#endif // __ANDROID__
+     if ( bAbort )
+         return EXIT_FAILURE;
+ 
+@@ -1705,7 +1720,7 @@ int Desktop::Main()
+         }
+     }
+ 
+-    pExecGlobals->bRestartRequested = xRestartManager->isRestartRequested(true);
++    pExecGlobals->bRestartRequested = xRestartManager.is() && xRestartManager->isRestartRequested(true);
+     if ( !pExecGlobals->bRestartRequested )
+     {
+         if ((!rCmdLineArgs.WantsToLoadDocument() && !rCmdLineArgs.IsInvisible() && !rCmdLineArgs.IsHeadless() && !rCmdLineArgs.IsQuickstart()) &&
+-- 
+2.54.0
+
