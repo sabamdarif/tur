@@ -1,0 +1,98 @@
+From 3a02b85395c81b2d683ef69e0c688de0c3766467 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Sun, 24 May 2026 20:35:09 +0530
+Subject: [PATCH] debug-backing-component-io-exception
+
+Add try-catch(...) around ShowBackingComponent on Android to handle
+IOException thrown from LayoutManager during setComponent() ->
+COMPONENT_ATTACHED event. The exception escapes catch blocks due to
+Bionic RTTI type_info pointer mismatch across .so boundaries.
+---
+ desktop/source/app/app.cxx | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index 5373589fb..6ccb2d5f3 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -2774,20 +2774,37 @@ void Desktop::ShowBackingComponent(Desktop * progress)
+     {
+         return;
+     }
++#if defined(__ANDROID__)
++    // On Android/Bionic, exceptions thrown from dynamically loaded framework
++    // libraries (e.g. IOException during LayoutManager toolbar/menubar init
++    // triggered by setComponent -> COMPONENT_ATTACHED event) escape standard
++    // catch blocks due to RTTI type_info pointer mismatch across .so boundaries.
++    // Wrap the entire backing component initialization in catch(...) to prevent
++    // a crash. The Start Center may not appear, but LO can still open documents.
++    try
++    {
++#endif
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 1 (get context)\n"); fflush(stderr);
+     const Reference< XComponentContext >& xContext = comphelper::getProcessComponentContext();
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 2 (create desktop)\n"); fflush(stderr);
+     Reference< XDesktop2 > xDesktop = css::frame::Desktop::create(xContext);
+     if (progress != nullptr)
+     {
+         progress->SetSplashScreenProgress(60);
+     }
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 3 (find frame _blank)\n"); fflush(stderr);
+     Reference< XFrame > xBackingFrame = xDesktop->findFrame( u"_blank"_ustr, 0);
+     Reference< css::awt::XWindow > xContainerWindow;
+ 
+     if (xBackingFrame.is())
+         xContainerWindow = xBackingFrame->getContainerWindow();
+     if (!xContainerWindow.is())
++    {
++        fprintf(stderr, "DEBUG: ShowBackingComponent step 3.5 (no container window)\n"); fflush(stderr);
+         return;
++    }
+ 
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 4 (get/set container window style)\n"); fflush(stderr);
+     // set the WindowExtendedStyle::Document style. Normally, this is done by the TaskCreator service when a "_blank"
+     // frame/window is created. Since we do not use the TaskCreator here, we need to mimic its behavior,
+     // otherwise documents loaded into this frame will later on miss functionality depending on the style.
+@@ -2799,7 +2816,9 @@ void Desktop::ShowBackingComponent(Desktop * progress)
+         progress->SetSplashScreenProgress(75);
+     }
+ 
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 5 (create StartModule)\n"); fflush(stderr);
+     Reference< XController > xStartModule = StartModule::createWithParentWindow( xContext, xContainerWindow);
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 6 (setComponent)\n"); fflush(stderr);
+     // Attention: You MUST(!) call setComponent() before you call attachFrame().
+     // Because the backing component set the property "IsBackingMode" of the frame
+     // to true inside attachFrame(). But setComponent() reset this state everytimes ...
+@@ -2808,12 +2827,29 @@ void Desktop::ShowBackingComponent(Desktop * progress)
+     {
+         progress->SetSplashScreenProgress(100);
+     }
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 7 (attachFrame)\n"); fflush(stderr);
+     xStartModule->attachFrame(xBackingFrame);
+     if (progress != nullptr)
+     {
+         progress->CloseSplashScreen();
+     }
++    fprintf(stderr, "DEBUG: ShowBackingComponent step 8 (setVisible)\n"); fflush(stderr);
+     xContainerWindow->setVisible(true);
++    fprintf(stderr, "DEBUG: ShowBackingComponent end\n"); fflush(stderr);
++#if defined(__ANDROID__)
++    }
++    catch (const css::uno::Exception& e)
++    {
++        fprintf(stderr, "WARNING: ShowBackingComponent caught UNO exception: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++    }
++    catch (...)
++    {
++        fprintf(stderr, "WARNING: ShowBackingComponent caught unknown exception (Bionic RTTI mismatch) - Start Center skipped\n");
++        fflush(stderr);
++    }
++#endif
+ }
+ 
+ 
+-- 
+2.54.0
+
