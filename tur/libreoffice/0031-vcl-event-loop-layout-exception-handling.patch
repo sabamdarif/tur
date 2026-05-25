@@ -1,0 +1,101 @@
+From f7e13355ed3677dba2c34faf68e042d27606866b Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Mon, 25 May 2026 17:39:22 +0530
+Subject: [PATCH] vcl-event-loop-layout-exception-handling
+
+Catch and log exceptions in the GTK event loop iteration, frameAction listener
+dispatch, and LayoutManager::frameAction on Android to prevent crashes
+caused by IOException/RTTI mismatch.
+---
+ .../source/layoutmanager/layoutmanager.cxx    | 12 +++++++++++
+ framework/source/services/frame.cxx           |  9 ++++++++
+ vcl/unx/gtk3/gtkdata.cxx                      | 21 +++++++++++++++++++
+ 3 files changed, 42 insertions(+)
+
+diff --git a/framework/source/layoutmanager/layoutmanager.cxx b/framework/source/layoutmanager/layoutmanager.cxx
+index b1ee39ed5..ef89f55d5 100644
+--- a/framework/source/layoutmanager/layoutmanager.cxx
++++ b/framework/source/layoutmanager/layoutmanager.cxx
+@@ -2706,6 +2706,10 @@ IMPL_LINK_NOARG(LayoutManager, AsyncLayoutHdl, Timer *, void)
+ 
+ void SAL_CALL LayoutManager::frameAction( const FrameActionEvent& aEvent )
+ {
++#if defined(__ANDROID__)
++    try
++    {
++#endif
+     if (( aEvent.Action == FrameAction_COMPONENT_ATTACHED ) || ( aEvent.Action == FrameAction_COMPONENT_REATTACHED ))
+     {
+         SAL_INFO( "fwk", "LayoutManager::frameAction (COMPONENT_ATTACHED|REATTACHED)" );
+@@ -2731,6 +2735,14 @@ void SAL_CALL LayoutManager::frameAction( const FrameActionEvent& aEvent )
+ 
+         implts_reset( false );
+     }
++#if defined(__ANDROID__)
++    }
++    catch ( ... )
++    {
++        fprintf(stderr, "WARNING: LayoutManager::frameAction caught exception (UI layout skipped on Android)\n");
++        fflush(stderr);
++    }
++#endif
+ }
+ 
+ void SAL_CALL LayoutManager::disposing( const lang::EventObject& rEvent )
+diff --git a/framework/source/services/frame.cxx b/framework/source/services/frame.cxx
+index 441b25b57..b648ec310 100644
+--- a/framework/source/services/frame.cxx
++++ b/framework/source/services/frame.cxx
+@@ -2958,6 +2958,15 @@ void XFrameImpl::implts_sendFrameActionEvent( const css::frame::FrameAction& aAc
+         {
+             aIterator.remove();
+         }
++#if defined(__ANDROID__)
++        catch ( ... )
++        {
++            // On Android/Bionic, prevent listener exceptions (like IOException from LayoutManager)
++            // from propagating and crashing the application.
++            fprintf(stderr, "WARNING: implts_sendFrameActionEvent caught exception from listener\n");
++            fflush(stderr);
++        }
++#endif
+     }
+ }
+ 
+diff --git a/vcl/unx/gtk3/gtkdata.cxx b/vcl/unx/gtk3/gtkdata.cxx
+index 0d6561b6f..5f9ed40fc 100644
+--- a/vcl/unx/gtk3/gtkdata.cxx
++++ b/vcl/unx/gtk3/gtkdata.cxx
+@@ -404,8 +404,29 @@ bool GtkSalData::Yield( bool bWait, bool bHandleAllCurrentEvents )
+                 if( wasOneEvent )
+                     bWasEvent = true;
+             }
++#if defined(__ANDROID__)
++            if (m_aException)
++            {
++                try
++                {
++                    std::rethrow_exception(m_aException);
++                }
++                catch (const std::exception& e)
++                {
++                    fprintf(stderr, "WARNING: VCL event loop caught std::exception: %s\n", e.what());
++                    fflush(stderr);
++                }
++                catch (...)
++                {
++                    fprintf(stderr, "WARNING: VCL event loop caught exception (likely UNO exception/RTTI mismatch)\n");
++                    fflush(stderr);
++                }
++                m_aException = nullptr;
++            }
++#else
+             if (m_aException)
+                 std::rethrow_exception(m_aException);
++#endif
+         }
+         else if( bWait )
+         {
+-- 
+2.54.0
+
