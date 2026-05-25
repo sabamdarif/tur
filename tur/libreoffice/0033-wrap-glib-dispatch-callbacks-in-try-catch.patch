@@ -1,0 +1,56 @@
+From d86d6a3e9cedaa073156e9693b8ae4991c3aaf6a Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Tue, 26 May 2026 02:10:45 +0530
+Subject: [PATCH] wrap-glib-dispatch-callbacks-in-try-catch
+
+---
+ vcl/unx/gtk3/gtkdata.cxx | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/vcl/unx/gtk3/gtkdata.cxx b/vcl/unx/gtk3/gtkdata.cxx
+index 5f9ed40fc..1f87aa6f8 100644
+--- a/vcl/unx/gtk3/gtkdata.cxx
++++ b/vcl/unx/gtk3/gtkdata.cxx
+@@ -752,7 +752,20 @@ extern "C" {
+ 
+         ImplSVData* pSVData = ImplGetSVData();
+         if( pSVData->maSchedCtx.mpSalTimer )
++        {
++#if defined(__ANDROID__)
++            try
++            {
++                pSVData->maSchedCtx.mpSalTimer->CallCallback();
++            }
++            catch (...)
++            {
++                GetGtkSalData()->setException(std::current_exception());
++            }
++#else
+             pSVData->maSchedCtx.mpSalTimer->CallCallback();
++#endif
++        }
+ 
+         return G_SOURCE_REMOVE;
+     }
+@@ -848,7 +861,18 @@ extern "C" {
+         {
+             GtkSalDisplay *pThisDisplay = static_cast<GtkSalData *>(data)->GetGtkDisplay();
+             assert(static_cast<const SalGenericDisplay *>(pThisDisplay) == pDisplay);
++#if defined(__ANDROID__)
++            try
++            {
++                pThisDisplay->DispatchInternalEvent();
++            }
++            catch (...)
++            {
++                static_cast<GtkSalData *>(data)->setException(std::current_exception());
++            }
++#else
+             pThisDisplay->DispatchInternalEvent();
++#endif
+         }
+         return true;
+     }
+-- 
+2.54.0
+
