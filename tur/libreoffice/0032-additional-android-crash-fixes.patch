@@ -1,0 +1,95 @@
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index 6ccb2d5f3..455489aa6 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -1766,7 +1766,21 @@ int Desktop::Main()
+ 
+         if ( !rCmdLineArgs.IsInvisible() &&
+              !rCmdLineArgs.IsNoQuickstart() )
++        {
++#if defined(__ANDROID__)
++            try
++            {
++                InitializeQuickstartMode( xContext );
++            }
++            catch (...)
++            {
++                fprintf(stderr, "WARNING: InitializeQuickstartMode threw exception, skipped on Android\n");
++                fflush(stderr);
++            }
++#else
+             InitializeQuickstartMode( xContext );
++#endif
++        }
+ 
+         if ( xDesktop.is() )
+             xDesktop->addTerminateListener( new RequestHandlerController );
+diff --git a/desktop/source/app/sofficemain.cxx b/desktop/source/app/sofficemain.cxx
+index 06ff2bfbc..188c816a1 100644
+--- a/desktop/source/app/sofficemain.cxx
++++ b/desktop/source/app/sofficemain.cxx
+@@ -49,6 +49,10 @@
+ #ifdef __ANDROID__
+ #  include <jni.h>
+ #  include <salhelper/thread.hxx>
++#  include <cstdio>
++#  include <cstdlib>
++#  include <stdexcept>
++#  include <rtl/ustring.hxx>
+ //#  include <android/log.h>
+ 
+ //#  define LOGTAG "LibreOffice/sofficemain"
+@@ -123,9 +127,18 @@ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
+     return SVMain();
+ #if defined __ANDROID__
+     } catch (const css::uno::Exception &e) {
+-        //LOGI("Unhandled UNO exception: '%s'",
+-        //     OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
+-        throw; // to get exception type printed
++        fprintf(stderr, "FATAL: soffice_main caught UNO exception: %s\n",
++                OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
++        fflush(stderr);
++        return EXIT_FAILURE;
++    } catch (const std::exception &e) {
++        fprintf(stderr, "FATAL: soffice_main caught std::exception: %s\n", e.what());
++        fflush(stderr);
++        return EXIT_FAILURE;
++    } catch (...) {
++        fprintf(stderr, "FATAL: soffice_main caught unknown exception\n");
++        fflush(stderr);
++        return EXIT_FAILURE;
+     }
+ #endif
+ }
+diff --git a/vcl/source/app/svmain.cxx b/vcl/source/app/svmain.cxx
+index e82907153..51957a9f7 100644
+--- a/vcl/source/app/svmain.cxx
++++ b/vcl/source/app/svmain.cxx
+@@ -235,15 +235,27 @@ int ImplSVMain()
+             fprintf(stderr, "FATAL: VCL: App->Main() threw UNO exception: %s\n",
+                     OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
+             fflush(stderr);
++#if !defined(__ANDROID__)
+             throw;
++#else
++            nReturn = EXIT_FAILURE;
++#endif
+         } catch (const std::exception& e) {
+             fprintf(stderr, "FATAL: VCL: App->Main() threw std exception: %s\n", e.what());
+             fflush(stderr);
++#if !defined(__ANDROID__)
+             throw;
++#else
++            nReturn = EXIT_FAILURE;
++#endif
+         } catch (...) {
+             fprintf(stderr, "FATAL: VCL: App->Main() threw unknown exception\n");
+             fflush(stderr);
++#if !defined(__ANDROID__)
+             throw;
++#else
++            nReturn = EXIT_FAILURE;
++#endif
+         }
+         pSVData->maAppData.mbInAppMain = false;
+         fprintf(stderr, "DEBUG: VCL: App->Main() returned %d\n", nReturn); fflush(stderr);
