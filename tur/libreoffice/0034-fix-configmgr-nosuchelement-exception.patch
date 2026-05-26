@@ -1,0 +1,44 @@
+From 792ea27233561f55c0ce0d3d8c2ac73dc4993e98 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Wed, 27 May 2026 01:09:56 +0530
+Subject: [PATCH] fix configmgr NoSuchElementException RTTI crash
+
+---
+ configmgr/source/components.cxx | 21 ++++++++++++++++++---
+ 1 file changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/configmgr/source/components.cxx b/configmgr/source/components.cxx
+index 85e66a1f2..26f70ef5e 100644
+--- a/configmgr/source/components.cxx
++++ b/configmgr/source/components.cxx
+@@ -869,9 +869,24 @@ void Components::parseResLayer(int layer, std::u16string_view url) {
+ }
+ 
+ void Components::parseModificationLayer(int layer, OUString const & url) {
+-    try {
+-        parseFileLeniently(&parseXcuFile, url, layer, nullptr, nullptr, nullptr);
+-    } catch (css::container::NoSuchElementException &) {
++    osl::DirectoryItem item;
++    if (osl::DirectoryItem::get(url, item) == osl::FileBase::E_None) {
++        try {
++            parseFileLeniently(&parseXcuFile, url, layer, nullptr, nullptr, nullptr);
++        } catch (css::container::NoSuchElementException &) {
++            SAL_INFO(
++                "configmgr", "user registrymodifications.xcu does not (yet) exist");
++            // Migrate old user layer data (can be removed once migration is no
++            // longer relevant, probably OOo 4; also see hack for xsi namespace in
++            // xmlreader::XmlReader::registerNamespaceIri):
++            parseFiles(
++                layer, u".xcu"_ustr, &parseXcuFile,
++                expand(
++                    u"${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("bootstrap")
++                    ":UserInstallation}/user/registry/data"_ustr),
++                false);
++        }
++    } else {
+         SAL_INFO(
+             "configmgr", "user registrymodifications.xcu does not (yet) exist");
+         // Migrate old user layer data (can be removed once migration is no
+-- 
+2.54.0
+
