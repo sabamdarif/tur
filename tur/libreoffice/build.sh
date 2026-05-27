@@ -130,9 +130,11 @@ termux_step_pre_configure() {
 	# (ARM: __aeabi_* division helpers; x86: __divdi3/__moddi3 for 64-bit division).
 	# Without explicit linkage the Termux symbol checker flags them as undefined.
 	if [ "$TERMUX_ARCH" = "arm" ] || [ "$TERMUX_ARCH" = "i686" ]; then
-		export LDFLAGS="${LDFLAGS} -lgcc"
-		export CMAKE_SHARED_LINKER_FLAGS="-lgcc"
-		export CMAKE_EXE_LINKER_FLAGS="-lgcc"
+		local _libgcc_file="$($CC -print-libgcc-file-name)"
+		export TERMUX_32BIT_BUILTINS="$_libgcc_file"
+		export LDFLAGS="${LDFLAGS} $_libgcc_file"
+		export CMAKE_SHARED_LINKER_FLAGS="${CMAKE_SHARED_LINKER_FLAGS} $_libgcc_file"
+		export CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS} $_libgcc_file"
 	fi
 	# Ensure meson and ninja are available for CONF-FOR-BUILD (host)
 	# which needs them to build internal harfbuzz
