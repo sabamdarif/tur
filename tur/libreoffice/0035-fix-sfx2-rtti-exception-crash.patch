@@ -1,9 +1,8 @@
 diff --git a/sfx2/source/doc/objxtor.cxx b/sfx2/source/doc/objxtor.cxx
-index bce5678..2c83ff9 100644
+index 71b372ca4..4f5afed98 100644
 --- a/sfx2/source/doc/objxtor.cxx
 +++ b/sfx2/source/doc/objxtor.cxx
-@@ -737,6 +737,13 @@ namespace
-             catch (const Exception&)
+@@ -738,6 +738,13 @@ namespace
              {
                  DBG_UNHANDLED_EXCEPTION("sfx.doc");
              }

@@ -95,29 +95,6 @@ index ca70a91d3..1842088a4 100644
      return context;
  }
  
-diff --git a/cppuhelper/source/exc_thrower.cxx b/cppuhelper/source/exc_thrower.cxx
-index db2c9b0d5..f05d8a5c4 100644
---- a/cppuhelper/source/exc_thrower.cxx
-+++ b/cppuhelper/source/exc_thrower.cxx
-@@ -20,6 +20,7 @@
- #include <rtl/instance.hxx>
- #include <osl/diagnose.h>
- #include <sal/log.hxx>
-+#include <cstdio>
- #include <uno/dispatcher.hxx>
- #include <uno/lbnames.h>
- #include <uno/mapping.hxx>
-@@ -254,6 +255,10 @@ void SAL_CALL throwException( Any const & exc )
- 
- Any SAL_CALL getCaughtException()
- {
-+#if defined(__ANDROID__)
-+    // On Termux/bionic, try the normal bridge path but log failures
-+    fprintf(stderr, "DEBUG: getCaughtException() called\n"); fflush(stderr);
-+#endif
-     // why does this differ from RETHROW_FAKE_EXCEPTIONS?
- #if defined(ANDROID)
-     return Any();
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
 index 32bcb8c01..0a7d972d3 100644
 --- a/desktop/source/app/app.cxx
@@ -757,58 +734,6 @@ index 7243db43e..04db4664b 100644
  #endif
      std::shared_ptr<comphelper::ConfigurationChanges> batch(
          comphelper::ConfigurationChanges::create());
-diff --git a/sal/osl/unx/security.cxx b/sal/osl/unx/security.cxx
-index 733aa0dfc..f3486663b 100644
---- a/sal/osl/unx/security.cxx
-+++ b/sal/osl/unx/security.cxx
-@@ -47,7 +47,7 @@
- 
- #include "secimpl.hxx"
- 
--#ifdef ANDROID
-+#if defined(ANDROID) || defined(__ANDROID__)
- #define getpwuid_r(uid, pwd, buf, buflen, result) (*(result) = getpwuid(uid), (*(result) ? (memcpy (buf, *(result), sizeof (struct passwd)), 0) : errno))
- #include <rtl/bootstrap.hxx>
- #endif
-@@ -168,8 +168,38 @@ oslSecurity SAL_CALL osl_getCurrentSecurity()
-             }
-             [[fallthrough]];
-         default:
-+#if defined(__ANDROID__)
-+        {
-+            // Bionic may not have /etc/passwd — provide synthetic fallback
-+            // using environment variables (Termux sets $HOME and $USER)
-+            char * buffer = p->m_buffer;
-+            assert(n >= 256);
-+            const char* user = getenv("USER");
-+            if (!user) user = "termux";
-+            const char* home = getenv("HOME");
-+            if (!home) home = "@TERMUX_HOME@";
-+            strcpy(buffer, user);
-+            p->m_pPasswd.pw_name = buffer;
-+            buffer += strlen(buffer) + 1;
-+            strcpy(buffer, "*");
-+            p->m_pPasswd.pw_passwd = buffer;
-+            buffer += strlen(buffer) + 1;
-+            p->m_pPasswd.pw_uid = getuid();
-+            p->m_pPasswd.pw_gid = getgid();
-+            strcpy(buffer, "Termux User");
-+            p->m_pPasswd.pw_gecos = buffer;
-+            buffer += strlen(buffer) + 1;
-+            strcpy(buffer, home);
-+            p->m_pPasswd.pw_dir = buffer;
-+            buffer += strlen(buffer) + 1;
-+            strcpy(buffer, "");
-+            p->m_pPasswd.pw_shell = buffer;
-+            return p;
-+        }
-+#else
-             deleteSecurityImpl(p);
-             return nullptr;
-+#endif
-         }
- #endif
-     }
 diff --git a/vcl/source/app/svmain.cxx b/vcl/source/app/svmain.cxx
 index 58eec341a..e82907153 100644
 --- a/vcl/source/app/svmain.cxx

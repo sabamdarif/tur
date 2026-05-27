@@ -1,28 +1,15 @@
-From 6fe889364b049e67155fc4bff9e7c8a9f85cddeb Mon Sep 17 00:00:00 2001
-From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
-Date: Fri, 22 May 2026 17:32:27 +0530
-Subject: [PATCH] fix-uno-exception-bridge-for-bionic
-
-Extend ANDROID guards to include __ANDROID__ (compiler macro) so
-the UNO exception bridge workarounds activate on Termux/Bionic.
-
-Without this, getCaughtException() and throwException() use the
-normal C++ ABI bridge path which malfunctions on Bionic, causing
-exceptions to escape try-catch blocks and terminate the process.
-
-Also add DeploymentException, IOException, NoSuchElementException,
-IllegalArgumentException, and base Exception to the mobile throw
-handler so all exception types encountered during startup are
-handled correctly.
----
- cppuhelper/source/exc_thrower.cxx | 20 ++++++++++++++------
- 1 file changed, 14 insertions(+), 6 deletions(-)
-
 diff --git a/cppuhelper/source/exc_thrower.cxx b/cppuhelper/source/exc_thrower.cxx
-index f05d8a5c4..207c5a3e8 100644
+index db2c9b0d5..207c5a3e8 100644
 --- a/cppuhelper/source/exc_thrower.cxx
 +++ b/cppuhelper/source/exc_thrower.cxx
-@@ -27,6 +27,10 @@
+@@ -20,12 +20,17 @@
+ #include <rtl/instance.hxx>
+ #include <osl/diagnose.h>
+ #include <sal/log.hxx>
++#include <cstdio>
+ #include <uno/dispatcher.hxx>
+ #include <uno/lbnames.h>
+ #include <uno/mapping.hxx>
  #include <cppuhelper/detail/XExceptionThrower.hpp>
  #include <com/sun/star/ucb/InteractiveAugmentedIOException.hpp>
  #include <com/sun/star/ucb/NameClashException.hpp>
@@ -33,7 +20,7 @@ index f05d8a5c4..207c5a3e8 100644
  #include <com/sun/star/uno/RuntimeException.hpp>
  
  #include <cppuhelper/exc_hlp.hxx>
-@@ -168,7 +172,7 @@ ExceptionThrower::ExceptionThrower()
+@@ -167,7 +172,7 @@ ExceptionThrower::ExceptionThrower()
      uno_Interface::pDispatcher = ExceptionThrower_dispatch;
  }
  
@@ -42,7 +29,7 @@ index f05d8a5c4..207c5a3e8 100644
  #define RETHROW_FAKE_EXCEPTIONS 1
  #else
  #define RETHROW_FAKE_EXCEPTIONS 0
-@@ -208,7 +212,13 @@ void lo_mobile_throwException(css::uno::Any const& aException)
+@@ -207,7 +212,13 @@ void lo_mobile_throwException(css::uno::Any const& aException)
  
      tryThrow<css::ucb::InteractiveAugmentedIOException>(aException);
      tryThrow<css::ucb::NameClashException>(aException);
@@ -56,14 +43,9 @@ index f05d8a5c4..207c5a3e8 100644
  
      SAL_WARN("cppuhelper", "lo_mobile_throwException: Unhandled exception type: " << aException.getValueTypeName());
  
-@@ -255,12 +265,10 @@ void SAL_CALL throwException( Any const & exc )
- 
+@@ -255,7 +266,9 @@ void SAL_CALL throwException( Any const & exc )
  Any SAL_CALL getCaughtException()
  {
--#if defined(__ANDROID__)
--    // On Termux/bionic, try the normal bridge path but log failures
--    fprintf(stderr, "DEBUG: getCaughtException() called\n"); fflush(stderr);
--#endif
      // why does this differ from RETHROW_FAKE_EXCEPTIONS?
 -#if defined(ANDROID)
 +#if defined(ANDROID) || defined(__ANDROID__)
@@ -72,6 +54,3 @@ index f05d8a5c4..207c5a3e8 100644
      return Any();
  #else
      Mapping cpp2uno(Environment::getCurrent(), Environment(u"" UNO_LB_UNO ""_ustr));
--- 
-2.54.0
-

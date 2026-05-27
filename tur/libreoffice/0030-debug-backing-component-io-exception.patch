@@ -1,16 +1,3 @@
-From 3a02b85395c81b2d683ef69e0c688de0c3766467 Mon Sep 17 00:00:00 2001
-From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
-Date: Sun, 24 May 2026 20:35:09 +0530
-Subject: [PATCH] debug-backing-component-io-exception
-
-Add try-catch(...) around ShowBackingComponent on Android to handle
-IOException thrown from LayoutManager during setComponent() ->
-COMPONENT_ATTACHED event. The exception escapes catch blocks due to
-Bionic RTTI type_info pointer mismatch across .so boundaries.
----
- desktop/source/app/app.cxx | 36 ++++++++++++++++++++++++++++++++++++
- 1 file changed, 36 insertions(+)
-
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
 index 5373589fb..6ccb2d5f3 100644
 --- a/desktop/source/app/app.cxx
@@ -93,6 +80,3 @@ index 5373589fb..6ccb2d5f3 100644
  }
  
  
--- 
-2.54.0
-
