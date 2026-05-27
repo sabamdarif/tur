@@ -1,14 +1,17 @@
 diff --git a/external/coinmp/ExternalProject_coinmp.mk b/external/coinmp/ExternalProject_coinmp.mk
-index 3e5fac720..c73a69c62 100644
+index 3e5fac720..b2b970472 100644
 --- a/external/coinmp/ExternalProject_coinmp.mk
 +++ b/external/coinmp/ExternalProject_coinmp.mk
-@@ -39,7 +39,8 @@ $(call gb_ExternalProject_get_state_target,coinmp,build) :
+@@ -37,9 +37,10 @@ $(call gb_ExternalProject_get_state_target,coinmp,build) :
+ 			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
+ 			--without-glpk \
  			--enable-dependency-linking F77=unavailable \
- 			$(if $(filter LINUX,$(OS)), \
+-			$(if $(filter LINUX,$(OS)), \
++			$(if $(filter LINUX ANDROID,$(OS)), \
  				'LDFLAGS=-Wl$(COMMA)-z$(COMMA)origin \
 -					-Wl$(COMMA)-rpath$(COMMA)\$$$$ORIGIN') \
 +					-Wl$(COMMA)-rpath$(COMMA)\$$$$ORIGIN \
-+					$(if $(filter ARM I686,$(CPUNAME)),-lgcc)') \
++					$(if $(filter ARM INTEL,$(CPUNAME)),-lgcc)') \
  		&& $(MAKE) \
  		$(if $(filter MACOSX,$(OS)),&& $(PERL) \
  			$(SRCDIR)/solenv/bin/macosx-change-install-names.pl shl OOO \
