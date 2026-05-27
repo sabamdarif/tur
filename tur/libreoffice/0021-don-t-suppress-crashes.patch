@@ -1,8 +1,8 @@
 diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
-index 1643aaf4e..37cfd0f4e 100644
+index da313a19a..32bcb8c01 100644
 --- a/desktop/source/app/app.cxx
 +++ b/desktop/source/app/app.cxx
-@@ -1268,8 +1268,6 @@ void Desktop::Exception(ExceptionCategory nCategory)
+@@ -1226,8 +1226,6 @@ void Desktop::Exception(ExceptionCategory nCategory)
      if( bRestart )
      {
          RequestHandler::Disable();
@@ -11,7 +11,7 @@ index 1643aaf4e..37cfd0f4e 100644
  
          restartOnMac(false);
  #if !ENABLE_WASM_STRIP_SPLASH
-@@ -1277,7 +1275,7 @@ void Desktop::Exception(ExceptionCategory nCategory)
+@@ -1235,7 +1233,7 @@ void Desktop::Exception(ExceptionCategory nCategory)
              m_rSplashScreen->reset();
  #endif
  

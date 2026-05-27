@@ -1,5 +1,5 @@
 diff --git a/sdext/source/pdfimport/xpdfwrapper/pdfioutdev_gpl.cxx b/sdext/source/pdfimport/xpdfwrapper/pdfioutdev_gpl.cxx
-index 6b9184809..88fa9a159 100644
+index 6b9184809..8f7f706db 100644
 --- a/sdext/source/pdfimport/xpdfwrapper/pdfioutdev_gpl.cxx
 +++ b/sdext/source/pdfimport/xpdfwrapper/pdfioutdev_gpl.cxx
 @@ -526,7 +526,9 @@ int PDFOutDev::parseFont( long long nNewId, GfxFont* gfxFont, const GfxState* st

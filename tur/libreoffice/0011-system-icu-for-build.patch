@@ -1,8 +1,8 @@
 diff --git a/configure.ac b/configure.ac
-index e805fbf39..7d6647b70 100644
+index 669eb3990..565654968 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -6298,6 +6298,7 @@ if test "$cross_compiling" = "yes"; then
+@@ -6279,6 +6279,7 @@ if test "$cross_compiling" = "yes"; then
          --without-webdav \
          --without-x \
          --with-system-curl \

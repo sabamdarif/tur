@@ -38,7 +38,7 @@ index 49c551b62..8aef1e2ee 100644
  #elif defined _WIN32
      mpExceptionHandler = std::make_unique<google_breakpad::ExceptionHandler>(L".", nullptr, dumpCallback, nullptr, google_breakpad::ExceptionHandler::HANDLER_ALL);
 diff --git a/desktop/unx/source/start.c b/desktop/unx/source/start.c
-index 2529e214f..b14033ebf 100644
+index e9cf4c547..00e6620d4 100644
 --- a/desktop/unx/source/start.c
 +++ b/desktop/unx/source/start.c
 @@ -36,8 +36,8 @@

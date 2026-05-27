@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index a4921eba4..c36af7fc5 100644
+index e805fbf39..669eb3990 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -4386,26 +4386,7 @@ else
@@ -30,7 +30,7 @@ index a4921eba4..c36af7fc5 100644
  
  dnl ===================================================================
  dnl  Check which Visual Studio compiler is used
-@@ -12006,7 +11987,7 @@ else
+@@ -12008,7 +11989,7 @@ else
          save_CXXFLAGS=$CXXFLAGS
          save_IFS=$IFS
          IFS=$P_SEP
@@ -39,7 +39,7 @@ index a4921eba4..c36af7fc5 100644
              dnl Reset IFS as soon as possible, to avoid unexpected side effects (and the
              dnl "/usr/include" fallback makes sure we get here at least once; resetting rather than
              dnl unsetting follows the advice at <https://git.savannah.gnu.org/gitweb/?p=autoconf.git;
-@@ -13489,7 +13470,7 @@ elif test \( \( "$_os" = "Linux" -o "$_os" = "Darwin" \) -a "$ENABLE_NSS" = TRUE
+@@ -13491,7 +13472,7 @@ elif test \( \( "$_os" = "Linux" -o "$_os" = "Darwin" \) -a "$ENABLE_NSS" = TRUE
          SYSTEM_GPGMEPP=TRUE
  
          # C++ library doesn't come with fancy gpgmepp-config, check for headers the old-fashioned way

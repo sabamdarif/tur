@@ -1,5 +1,7 @@
---- a/desktop/source/app/sofficemain.cxx	2026-04-24 15:21:51.000000000 -0400
-+++ b/desktop/source/app/sofficemain.cxx	2026-05-17 20:47:55.551949175 -0400
+diff --git a/desktop/source/app/sofficemain.cxx b/desktop/source/app/sofficemain.cxx
+index ac0f72ec5..06ff2bfbc 100644
+--- a/desktop/source/app/sofficemain.cxx
++++ b/desktop/source/app/sofficemain.cxx
 @@ -46,13 +46,13 @@
  
  #include <postwin.h>
@@ -18,7 +20,7 @@
  #endif
  
  extern "C" int DESKTOP_DLLPUBLIC soffice_main()
-@@ -69,9 +69,10 @@
+@@ -69,9 +69,10 @@ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
      CrashReporter::installExceptionHandler();
  #endif
  
@@ -31,7 +33,7 @@
  #endif
      tools::extendApplicationEnvironment();
  
-@@ -120,10 +121,10 @@
+@@ -120,10 +121,10 @@ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
      }
  
      return SVMain();

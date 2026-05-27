@@ -1,6 +1,8 @@
+diff --git a/external/coinmp/ExternalProject_coinmp.mk b/external/coinmp/ExternalProject_coinmp.mk
+index 559d9eb1b..3e5fac720 100644
 --- a/external/coinmp/ExternalProject_coinmp.mk
 +++ b/external/coinmp/ExternalProject_coinmp.mk
-@@ -29,7 +29,7 @@
+@@ -29,7 +29,7 @@ else
  $(call gb_ExternalProject_get_state_target,coinmp,build) :
  	$(call gb_Trace_StartRange,coinmp,EXTERNAL)
  	+$(call gb_ExternalProject_run,build,\

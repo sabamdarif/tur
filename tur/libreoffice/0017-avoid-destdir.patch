@@ -1,5 +1,33 @@
+diff --git a/bin/distro-install-clean-up b/bin/distro-install-clean-up
+index 701c9ffa0..184d7d9d7 100755
+--- a/bin/distro-install-clean-up
++++ b/bin/distro-install-clean-up
+@@ -20,8 +20,8 @@ remove_help_localization()
+     echo "... remove \"$lang\""
+ 
+     rm -rf $DESTDIR$INSTALLDIR/help/$lang
+-    grep -v "$INSTALLDIR/help/$lang" $DESTDIR/gid_Module_Root.$lang >$DESTDIR/gid_Module_Root.$lang.new
+-    mv -f $DESTDIR/gid_Module_Root.$lang.new $DESTDIR/gid_Module_Root.$lang
++    grep -v "$INSTALLDIR/help/$lang" $INSTALLDIR/gid_Module_Root.$lang >$INSTALLDIR/gid_Module_Root.$lang.new
++    mv -f $INSTALLDIR/gid_Module_Root.$lang.new $INSTALLDIR/gid_Module_Root.$lang
+     # FIXME: the following code could be used without the condition
+     #        and should replace the lines above after only the milestones
+     #	     providing gid_Module_Helppack_Help and fixed gid_Module_Root.$lang
+@@ -30,9 +30,9 @@ remove_help_localization()
+     #       %dir */help/* entries.
+     # Note: It was still necessary on ppc with gcj (OOo-2.0.2). Strange. Have to
+     # investigate it later.
+-    if test -f $DESTDIR/gid_Module_Helppack_Help.$lang ; then
+-	grep -v "$INSTALLDIR/help/$lang" $DESTDIR/gid_Module_Helppack_Help.$lang >$DESTDIR/gid_Module_Helppack_Help.$lang.new
+-	mv -f $DESTDIR/gid_Module_Helppack_Help.$lang.new $DESTDIR/gid_Module_Helppack_Help.$lang
++    if test -f $INSTALLDIR/gid_Module_Helppack_Help.$lang ; then
++	grep -v "$INSTALLDIR/help/$lang" $INSTALLDIR/gid_Module_Helppack_Help.$lang >$INSTALLDIR/gid_Module_Helppack_Help.$lang.new
++	mv -f $INSTALLDIR/gid_Module_Helppack_Help.$lang.new $INSTALLDIR/gid_Module_Helppack_Help.$lang
+     fi
+ 
+     # Note: We created a compat symlink in the past. It is no longer necessary.
 diff --git a/bin/distro-install-desktop-integration b/bin/distro-install-desktop-integration
-index 7e1428ffb..d0817f190 100755
+index 7e1428ffb..aae992fd2 100755
 --- a/bin/distro-install-desktop-integration
 +++ b/bin/distro-install-desktop-integration
 @@ -33,7 +33,7 @@ EOT
@@ -102,34 +130,6 @@ index 7e1428ffb..d0817f190 100755
 +test -f $INSTALLDIR/gid_Module_Root_Brand && echo "$INSTALLDIR/program/java-set-classpath" >>$INSTALLDIR/gid_Module_Root_Brand
  
  exit 0
-diff --git a/bin/distro-install-clean-up b/bin/distro-install-clean-up
-index 701c9ffa0..184d7d9d7 100755
---- a/bin/distro-install-clean-up
-+++ b/bin/distro-install-clean-up
-@@ -20,8 +20,8 @@ remove_help_localization()
-     echo "... remove \"$lang\""
- 
-     rm -rf $DESTDIR$INSTALLDIR/help/$lang
--    grep -v "$INSTALLDIR/help/$lang" $DESTDIR/gid_Module_Root.$lang >$DESTDIR/gid_Module_Root.$lang.new
--    mv -f $DESTDIR/gid_Module_Root.$lang.new $DESTDIR/gid_Module_Root.$lang
-+    grep -v "$INSTALLDIR/help/$lang" $INSTALLDIR/gid_Module_Root.$lang >$INSTALLDIR/gid_Module_Root.$lang.new
-+    mv -f $INSTALLDIR/gid_Module_Root.$lang.new $INSTALLDIR/gid_Module_Root.$lang
-     # FIXME: the following code could be used without the condition
-     #        and should replace the lines above after only the milestones
-     #	     providing gid_Module_Helppack_Help and fixed gid_Module_Root.$lang
-@@ -30,9 +30,9 @@ remove_help_localization()
-     #       %dir */help/* entries.
-     # Note: It was still necessary on ppc with gcj (OOo-2.0.2). Strange. Have to
-     # investigate it later.
--    if test -f $DESTDIR/gid_Module_Helppack_Help.$lang ; then
--	grep -v "$INSTALLDIR/help/$lang" $DESTDIR/gid_Module_Helppack_Help.$lang >$DESTDIR/gid_Module_Helppack_Help.$lang.new
--	mv -f $DESTDIR/gid_Module_Helppack_Help.$lang.new $DESTDIR/gid_Module_Helppack_Help.$lang
-+    if test -f $INSTALLDIR/gid_Module_Helppack_Help.$lang ; then
-+	grep -v "$INSTALLDIR/help/$lang" $INSTALLDIR/gid_Module_Helppack_Help.$lang >$INSTALLDIR/gid_Module_Helppack_Help.$lang.new
-+	mv -f $INSTALLDIR/gid_Module_Helppack_Help.$lang.new $INSTALLDIR/gid_Module_Helppack_Help.$lang
-     fi
- 
-     # Note: We created a compat symlink in the past. It is no longer necessary.
 diff --git a/bin/distro-install-file-lists b/bin/distro-install-file-lists
 index 9fccb81dc..3b9309988 100755
 --- a/bin/distro-install-file-lists

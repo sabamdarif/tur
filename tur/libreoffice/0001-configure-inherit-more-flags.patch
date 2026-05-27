@@ -1,13 +1,3 @@
-From e2174c76b68c3ed623e3739f1ec020f377cff9ad Mon Sep 17 00:00:00 2001
-From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
-Date: Sat, 9 May 2026 11:37:54 +0530
-Subject: [PATCH] configure-inherit-more-flags
-
----
- config_host.mk.in |  1 +
- configure.ac      | 20 ++++++++++++++++++--
- 2 files changed, 19 insertions(+), 2 deletions(-)
-
 diff --git a/config_host.mk.in b/config_host.mk.in
 index 3452ad8fd..1ff16323b 100644
 --- a/config_host.mk.in
@@ -96,6 +86,3 @@ index 9be073337..e805fbf39 100644
  "
      # single quotes added for better readability in case of spaces
      echo "    Running CONF-FOR-BUILD/configure" \
--- 
-2.54.0
-
