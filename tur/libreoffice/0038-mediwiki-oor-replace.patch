@@ -1,0 +1,51 @@
+diff --git a/swext/mediawiki/src/registry/data/org/openoffice/Office/OptionsDialog.xcu b/swext/mediawiki/src/registry/data/org/openoffice/Office/OptionsDialog.xcu
+index 2b35ced08..0c96070dd 100644
+--- a/swext/mediawiki/src/registry/data/org/openoffice/Office/OptionsDialog.xcu
++++ b/swext/mediawiki/src/registry/data/org/openoffice/Office/OptionsDialog.xcu
+@@ -18,9 +18,9 @@
+  -->
+ <oor:component-data oor:name="OptionsDialog" oor:package="org.openoffice.Office" xmlns:oor="http://openoffice.org/2001/registry">
+     <node oor:name="Nodes">
+-        <node oor:name="Internet" oor:op="fuse">
++        <node oor:name="Internet" oor:op="replace">
+             <node oor:name="Leaves">
+-                <node oor:name="com.sun.star.wiki.options" oor:op="fuse">
++                <node oor:name="com.sun.star.wiki.options" oor:op="replace">
+                     <prop oor:name="Id">
+                         <value>com.sun.wiki-publisher</value>
+                     </prop>
+diff --git a/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Filter.xcu b/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Filter.xcu
+index 3309b5038..261e470b2 100644
+--- a/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Filter.xcu
++++ b/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Filter.xcu
+@@ -19,7 +19,7 @@
+ <!DOCTYPE oor:component-data SYSTEM "../../../../../../../../officecfg/registry/component-update.dtd">
+ <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
+     <node oor:name="Filters">
+-        <node oor:name="MediaWiki" oor:op="fuse">
++        <node oor:name="MediaWiki" oor:op="replace">
+             <prop oor:name="FileFormatVersion"><value>0</value></prop>
+                 <prop oor:name="Type"><value>MediaWiki</value></prop>
+             <prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
+@@ -31,7 +31,7 @@
+             </prop>
+             <prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
+         </node>
+-        <node oor:name="MediaWiki_Web" oor:op="fuse">
++        <node oor:name="MediaWiki_Web" oor:op="replace">
+             <prop oor:name="FileFormatVersion"><value>0</value></prop>
+                 <prop oor:name="Type"><value>MediaWiki</value></prop>
+                 <prop oor:name="DocumentService"><value>com.sun.star.text.WebDocument</value></prop>
+diff --git a/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Types.xcu b/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Types.xcu
+index 15e4f8500..ce7cd0763 100644
+--- a/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Types.xcu
++++ b/swext/mediawiki/src/registry/data/org/openoffice/TypeDetection/Types.xcu
+@@ -19,7 +19,7 @@
+ <!DOCTYPE oor:component-data SYSTEM "../../../../../../../../officecfg/registry/component-update.dtd">
+ <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:package="org.openoffice.TypeDetection" oor:name="Types">
+     <node oor:name="Types">
+-        <node oor:name="MediaWiki" oor:op="fuse">
++        <node oor:name="MediaWiki" oor:op="replace">
+             <prop oor:name="DetectService"><value>com.sun.star.comp.filters.XMLFilterDetect</value></prop>
+             <prop oor:name="URLPattern"/>
+             <prop oor:name="Extensions"><value>txt</value></prop>
