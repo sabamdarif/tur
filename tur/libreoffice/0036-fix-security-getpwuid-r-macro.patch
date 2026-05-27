@@ -1,0 +1,13 @@
+diff --git a/sal/osl/unx/security.cxx b/sal/osl/unx/security.cxx
+index f3486663b..d97a9086a 100644
+--- a/sal/osl/unx/security.cxx
++++ b/sal/osl/unx/security.cxx
+@@ -47,7 +47,7 @@
+ 
+ #include "secimpl.hxx"
+ 
+-#if defined(ANDROID) || defined(__ANDROID__)
++#if 0
+ #define getpwuid_r(uid, pwd, buf, buflen, result) (*(result) = getpwuid(uid), (*(result) ? (memcpy (buf, *(result), sizeof (struct passwd)), 0) : errno))
+ #include <rtl/bootstrap.hxx>
+ #endif

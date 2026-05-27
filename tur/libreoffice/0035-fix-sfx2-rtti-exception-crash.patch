@@ -1,0 +1,19 @@
+diff --git a/sfx2/source/doc/objxtor.cxx b/sfx2/source/doc/objxtor.cxx
+index bce5678..2c83ff9 100644
+--- a/sfx2/source/doc/objxtor.cxx
++++ b/sfx2/source/doc/objxtor.cxx
+@@ -737,6 +737,13 @@ namespace
+             catch (const Exception&)
+             {
+                 DBG_UNHANDLED_EXCEPTION("sfx.doc");
+             }
++#if defined(__ANDROID__)
++            catch (...)
++            {
++                // Handle cross-library RTTI mismatch on Android/Bionic
++                SAL_WARN("sfx.doc", "lcl_getOrCreateLibraryContainer caught unknown exception on Android");
++            }
++#endif
+         }
+         return _rxContainer;
+     }
