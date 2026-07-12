@@ -1,0 +1,92 @@
+From 1e5888fa5ee3dbb741c496839c1f5d11481e9b13 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Sun, 12 Jul 2026 17:23:47 +0530
+Subject: [PATCH] 0040-fix-uno-bridge-rtti-lookup-scope-on-bionic
+
+The aarch64 UNO C++ bridge resolves exception type_info via a handle from
+dlopen(nullptr). On glibc that handle's dlsym searches global scope and
+finds the weak _ZTIN3com3sun4star... exception type_info symbols exported
+by dynamically-loaded UNO component libraries. On Bionic that handle only
+searches the main executable's local group, so the lookup fails and
+getRtti() fabricates a fresh type_info at a new address.
+
+Because libc++abi matches catch clauses by type_info pointer identity, a
+fabricated type_info matches neither the typed catch (e.g. io::IOException)
+nor its base uno::Exception. UNO exceptions therefore escape every typed
+handler and reach std::terminate -> abort. This is the mechanism behind the
+recurring 'typed catch misses / catch(...) catches' band-aids and the
+io::IOException abort during Start Center bring-up.
+
+Use RTLD_DEFAULT (global-scope search) on Android for the lookup. Combined
+with the existing RTLD_GLOBAL component-load forcing, the real type_info is
+resolved and correct catch matching is restored. A diagnostic on the
+fabrication path lets us confirm resolution (silence) vs. continued failure.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+---
+ .../source/cpp_uno/gcc3_linux_aarch64/abi.cxx | 32 +++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/bridges/source/cpp_uno/gcc3_linux_aarch64/abi.cxx b/bridges/source/cpp_uno/gcc3_linux_aarch64/abi.cxx
+index dcd27e95a..5d973931b 100644
+--- a/bridges/source/cpp_uno/gcc3_linux_aarch64/abi.cxx
++++ b/bridges/source/cpp_uno/gcc3_linux_aarch64/abi.cxx
+@@ -22,6 +22,7 @@
+ #include <cassert>
+ #include <cstddef>
+ #include <cstdint>
++#include <cstdio>
+ #include <cstring>
+ #include <typeinfo>
+ 
+@@ -75,9 +76,28 @@ OUString toUnoName(char const * name) {
+ 
+ class Rtti {
+ public:
++#if defined(__ANDROID__)
++    // On Bionic, the handle returned by dlopen(nullptr) has a dlsym search
++    // scope limited to the main executable's local group (soffice.bin plus its
++    // DT_NEEDED). It does NOT see the weak _ZTIN3com3sun4star... exception
++    // type_info symbols exported by the dynamically-loaded UNO component
++    // libraries, so getRtti() below would fail its dlsym and fabricate a fresh
++    // type_info at a new address. Because libc++abi matches catch clauses by
++    // type_info pointer identity, a fabricated type_info matches neither the
++    // typed catch (e.g. css::io::IOException) nor its base css::uno::Exception,
++    // so UNO exceptions escape every typed handler and reach std::terminate.
++    //
++    // RTLD_DEFAULT performs a global-scope search (main exe + all RTLD_GLOBAL
++    // objects); combined with forcing RTLD_GLOBAL on component loads, this
++    // resolves the *real* type_info and restores correct catch matching.
++    Rtti(): app_(RTLD_DEFAULT) {}
++
++    ~Rtti() {}
++#else
+     Rtti(): app_(dlopen(nullptr, RTLD_LAZY)) {}
+ 
+     ~Rtti() { dlclose(app_); }
++#endif
+ 
+     std::type_info * getRtti(typelib_TypeDescription const & type);
+ 
+@@ -107,6 +127,18 @@ std::type_info * Rtti::getRtti(typelib_TypeDescription const & type) {
+         std::type_info * rtti = static_cast<std::type_info *>(
+             dlsym(app_, sym.getStr()));
+         if (rtti == nullptr) {
++#if defined(__ANDROID__)
++            // DIAGNOSTIC: if this fires, the real exception type_info was NOT
++            // found in the global scope and we are about to fabricate a fake one
++            // that no typed catch clause can match. Silence here after the
++            // RTLD_DEFAULT change means the root cause is resolved.
++            fprintf(stderr,
++                "UNO-RTTI-FABRICATE: symbol '%s' not found in global scope; "
++                "fabricating type_info -> typed catch of this UNO exception "
++                "will FAIL\n",
++                sym.getStr());
++            fflush(stderr);
++#endif
+             char const * rttiName = strdup(sym.getStr() + std::strlen("_ZTI"));
+             if (rttiName == nullptr) {
+                 throw std::bad_alloc();
+-- 
+2.55.0
+
