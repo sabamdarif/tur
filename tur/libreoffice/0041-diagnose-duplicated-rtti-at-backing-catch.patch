@@ -1,0 +1,78 @@
+From 88f1ff5d6630bedc7a748a3d49608c64f15c5b4e Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Sun, 12 Jul 2026 23:11:00 +0530
+Subject: [PATCH] 0041-diagnose-duplicated-rtti-at-backing-catch
+
+Follow-up diagnostic to 0040. The previous run showed:
+  - no UNO-RTTI-FABRICATE line  -> the bridge did NOT fabricate a fake
+    type_info (0040's fix held; the real symbol was resolvable), yet
+  - the typed catch(css::uno::Exception&) in ShowBackingComponent STILL
+    missed and control fell through to catch(...).
+
+No fabrication + typed catch still failing means the mismatch is not the
+bridge inventing RTTI, but two *real* copies of the same exception
+class's type_info living in different .so files. libc++abi compares
+type_info by pointer identity, so the thrown object's type_info (from the
+library that raised it) is a different address than the copy compiled
+into libsofficeapp, and the catch clause does not match.
+
+This patch instruments the catch(...) in Desktop::ShowBackingComponent to
+print, via __cxa_current_exception_type(), the in-flight exception's real
+mangled class name and type_info pointer, and compares it against this
+translation unit's typeid(css::uno::Exception) and
+typeid(css::uno::RuntimeException) pointers. The output identifies exactly
+which exception class is duplicated, enabling a targeted visibility/linkage
+fix (single canonical, default-visibility type_info) rather than more
+catch(...) band-aids.
+
+Diagnostic only; no behavior change.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+---
+ desktop/source/app/app.cxx | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/desktop/source/app/app.cxx b/desktop/source/app/app.cxx
+index 455489aa6..2537a283b 100644
+--- a/desktop/source/app/app.cxx
++++ b/desktop/source/app/app.cxx
+@@ -32,6 +32,12 @@
+ #include <cstdlib>
+ #include <iostream>
+ #include <string_view>
++#if defined(__ANDROID__)
++#include <cstdio>
++#include <typeinfo>
++#include <cxxabi.h>
++#include <com/sun/star/uno/RuntimeException.hpp>
++#endif
+ 
+ #include <app.hxx>
+ #include <dp_shared.hxx>
+@@ -2860,6 +2866,23 @@ void Desktop::ShowBackingComponent(Desktop * progress)
+     }
+     catch (...)
+     {
++        // DIAGNOSTIC: the typed catch(css::uno::Exception&) above did NOT match,
++        // yet an exception is in flight. Extract its real dynamic type_info so we
++        // can see (a) its true mangled class name and (b) whether its type_info
++        // pointer differs from this library's own copy of the same class -- which
++        // is the signature of duplicated RTTI across .so boundaries.
++        std::type_info * cur = __cxxabiv1::__cxa_current_exception_type();
++        const std::type_info & localUno = typeid(css::uno::Exception);
++        const std::type_info & localRt  = typeid(css::uno::RuntimeException);
++        fprintf(stderr,
++            "RTTI-DIAG: in-flight exception type='%s' ti_ptr=%p | "
++            "local uno::Exception ti_ptr=%p same=%d | "
++            "local uno::RuntimeException ti_ptr=%p same=%d\n",
++            cur ? cur->name() : "(null)", static_cast<void*>(cur),
++            static_cast<const void*>(&localUno),
++            (cur && *cur == localUno) ? 1 : 0,
++            static_cast<const void*>(&localRt),
++            (cur && *cur == localRt) ? 1 : 0);
+         fprintf(stderr, "WARNING: ShowBackingComponent caught unknown exception (Bionic RTTI mismatch) - Start Center skipped\n");
+         fflush(stderr);
+     }
+-- 
+2.55.0
+
