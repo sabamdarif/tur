@@ -1,0 +1,152 @@
+From 623d6e2d31ce9e639bb9368b25b4b65951ce8caa Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Mon, 13 Jul 2026 12:47:54 +0530
+Subject: [PATCH] 0042-promote-startup-closure-to-global-group-for-rtti
+
+Root-cause fix for the cross-.so RTTI mismatch that makes typed
+catch(css::uno::Exception&) miss derived UNO exceptions on Bionic
+(observed as the ucb::NameClashException / io::IOException that escapes
+every typed handler during Start Center bring-up).
+
+Evidence (device readelf sweep):
+  - The C++ type_info for uno::Exception, io::IOException and
+    ucb::NameClashException is present in ~150 program/*.so files, every
+    copy OBJECT WEAK DEFAULT and locally defined (Ndx != UND). So the
+    symbols are exported correctly; this is NOT a visibility/link bug.
+  - Exactly one C++ runtime is linked (libc++_shared.so); the old
+    "double libc++" theory is disproved.
+
+Mechanism: glibc interposes weak vague-linkage symbols process-wide, so
+each type_info collapses to a single address and RTTI pointer-identity
+works across libraries. Bionic instead resolves per dlopen group. The
+executable's startup closure (libsofficeapp + its DT_NEEDED: libvcllo,
+libsfxlo, libsvllo, libutllo, libucbhelper, ...) binds every type_info to
+one canonical copy (address A). Each UNO component dlopen'd later
+(libucpfile1, ...) is its own group and binds its type_info -- including
+the base-class pointers inside it -- to a different copy (address B). The
+base-chain walk during catch matching then compares A vs B, fails, and the
+exception falls through to catch(...). Patch 0028 (force RTLD_GLOBAL on
+component loads) was insufficient because the startup-closure libraries are
+DT_NEEDED of the executable and were never placed in the global group, so
+their canonical copies (address A, used by the catch sites) are not in the
+scope components search.
+
+Fix: at the very top of soffice_main (Android only), before any UNO
+component is loaded, walk the already-mapped objects with dl_iterate_phdr
+and re-dlopen each program/*.so with RTLD_GLOBAL|RTLD_NOLOAD to promote the
+startup closure into the process global group. Components then resolve
+their exception type_info against that global group first and bind to
+address A -- one address everywhere -> pointer-identity restored -> typed
+catches match. dl_iterate_phdr load order preserves the same first-definer
+winner, so the global-group winner equals address A.
+
+The RTTI-DIAG instrumentation from 0041 remains: if the fix holds, the
+typed catch fires and RTTI-DIAG no longer prints; if a mismatch remains,
+its addresses tell us which group still diverges.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+---
+ desktop/source/app/sofficemain.cxx | 77 ++++++++++++++++++++++++++++++
+ 1 file changed, 77 insertions(+)
+
+diff --git a/desktop/source/app/sofficemain.cxx b/desktop/source/app/sofficemain.cxx
+index 188c816a1..de6fae47c 100644
+--- a/desktop/source/app/sofficemain.cxx
++++ b/desktop/source/app/sofficemain.cxx
+@@ -51,16 +51,93 @@
+ #  include <salhelper/thread.hxx>
+ #  include <cstdio>
+ #  include <cstdlib>
++#  include <cstring>
+ #  include <stdexcept>
+ #  include <rtl/ustring.hxx>
++#  include <dlfcn.h>
++#  include <link.h>
+ //#  include <android/log.h>
+ 
+ //#  define LOGTAG "LibreOffice/sofficemain"
+ //#  define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOGTAG, __VA_ARGS__))
++
++namespace {
++
++// Bionic, unlike glibc, does not perform process-wide interposition of weak
++// (vague-linkage) symbols. It resolves symbols per dlopen "group". LibreOffice
++// emits each UNO exception's C++ type_info (_ZTIN3com3sun4star...) as a WEAK
++// DEFAULT symbol in every .so that uses it, relying on the loader to collapse
++// all copies to one address so that RTTI pointer-identity works across .so
++// boundaries (this is how catch(css::uno::Exception&) matches a derived UNO
++// exception).
++//
++// The executable's startup closure (soffice.bin -> libsofficeapp -> its
++// DT_NEEDED: libvcllo, libsfxlo, libsvllo, libutllo, libucbhelper, ...) forms
++// one group and binds every type_info to one canonical copy ("address A").
++// Each UNO component later dlopen'd (libucpfile1, ...) is its own group and,
++// on Bionic, binds its type_info (and the base-class pointers inside it) to a
++// DIFFERENT copy ("address B"). A ub -> io -> uno::Exception base-chain walk
++// during catch matching then compares A vs B, fails, and the exception escapes
++// every typed handler (falling through to catch(...) or std::terminate).
++//
++// Promoting the already-loaded startup closure into the process GLOBAL group
++// BEFORE any UNO component is dlopen'd makes those canonical copies (address A)
++// visible in the scope the components search first. Combined with forcing
++// RTLD_GLOBAL on component loads (see sal/osl/unx/module.cxx), every component
++// then binds its exception type_info to address A as well -> single address
++// everywhere -> pointer-identity restored -> typed catches match again.
++//
++// dl_iterate_phdr yields objects in load order, so re-dlopen'ing them with
++// RTLD_GLOBAL|RTLD_NOLOAD preserves the same "first definer wins" ordering the
++// startup group already used, keeping the global-group winner identical to
++// address A.
++extern "C" int promoteLoadedObjectToGlobal(struct dl_phdr_info * info, size_t, void * pCount)
++{
++    const char * name = info->dlpi_name;
++    if (name == nullptr || name[0] == '\0')
++        return 0; // main executable / linker; skip
++    // Only promote LibreOffice's own program libraries.
++    if (std::strstr(name, "/libreoffice/program/") == nullptr)
++        return 0;
++    // RTLD_NOLOAD: do not load anything new, only look up an already-mapped
++    // object and (with RTLD_GLOBAL) add it to the global group.
++    void * h = dlopen(name, RTLD_NOW | RTLD_GLOBAL | RTLD_NOLOAD);
++    if (h != nullptr)
++    {
++        ++*static_cast<int *>(pCount);
++        // Intentionally leak the handle: we want the object to stay in the
++        // global group for the whole process lifetime.
++    }
++    else
++    {
++        fprintf(stderr, "RTTI-PROMOTE: failed to promote '%s': %s\n",
++                name, dlerror());
++        fflush(stderr);
++    }
++    return 0;
++}
++
++void promoteStartupClosureToGlobal()
++{
++    int nPromoted = 0;
++    dl_iterate_phdr(promoteLoadedObjectToGlobal, &nPromoted);
++    fprintf(stderr, "RTTI-PROMOTE: promoted %d LibreOffice libraries into the "
++            "global symbol group\n", nPromoted);
++    fflush(stderr);
++}
++
++} // namespace
+ #endif
+ 
+ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
+ {
++#if defined __ANDROID__
++    // Must run before any UNO component library is dlopen'd, so that the
++    // startup closure's canonical exception type_info copies are already in the
++    // global group when components resolve their own type_info symbols.
++    promoteStartupClosureToGlobal();
++#endif
++
+ #if defined _WIN32
+     // If this is a UI test, we may need to switch to a dedicated desktop
+     if (o3tl::IsRunningUITest())
+-- 
+2.55.0
+
