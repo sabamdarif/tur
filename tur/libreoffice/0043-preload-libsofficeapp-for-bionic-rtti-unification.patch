@@ -1,0 +1,81 @@
+From 8a9732a83042fe0a3558e5176dff540bdead79c0 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Fri, 17 Jul 2026 02:37:39 +0530
+Subject: [PATCH] 0043-preload-libsofficeapp-for-bionic-rtti-unification
+
+Fixes the white Start Center window. Root cause chain confirmed live on
+device (LineageOS 13 / Bionic, aarch64):
+
+- The 0041 RTTI-DIAG instrumentation fired with a ucb::NameClashException
+  whose type_info lived in libucpfile1.so (0x7283ff1468) while the catch
+  site's uno::Exception type_info lived in libsofficeapp.so (0x7555718fe8).
+- Reading the live process memory showed libucpfile1's whole exception
+  base chain (NameClashException -> io::IOException -> uno::Exception)
+  bound to its OWN local copies, despite 0042's promotion reporting 42
+  libraries promoted. No DT_SYMBOLIC involved.
+- A minimal two-library experiment on the device (weak type_info + weak
+  data duplicated in liba/libb, libb dlopen'd later) established Bionic's
+  actual semantics:
+    * liba RTLD_LOCAL, then RTLD_NOLOAD|RTLD_GLOBAL promotion (0042's
+      mechanism): libb still binds its own copies. Typed catch misses.
+    * liba dlopen'd RTLD_GLOBAL from the start: same failure.
+    * liba as DT_NEEDED of the executable: same failure.
+    * liba LD_PRELOADed: libb binds liba's copies; typed catch matches.
+  Only the DF_1_GLOBAL flag applied AT LOAD TIME via LD_PRELOAD (or a
+  library linked with -Wl,-z,global) affects how later dlopen groups
+  resolve these symbols. dlopen-based promotion is a silent no-op.
+
+Fix: export LD_PRELOAD=$sd_prog/libsofficeapp.so in the soffice wrapper.
+Components then bind the common UNO exception type_infos to
+libsofficeapp's copies -- the same ones the desktop/framework catch sites
+use -- restoring pointer-identity catch matching.
+
+Verified on device: Start Center renders fully (screenshot-confirmed),
+--writer opens a document, RTTI-DIAG and UNO-RTTI-FABRICATE are silent,
+and the NameClashException no longer even escapes: it was always an
+internally-handled exception that only surfaced because typed catches
+could not match.
+
+Note for a future rebuild: linking all LibreOffice libraries with
+-Wl,-z,global should generalize this fix to component<->component
+exception types not covered by libsofficeapp's symbol set, and would
+remove the LD_PRELOAD requirement.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ desktop/scripts/soffice.sh | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/desktop/scripts/soffice.sh b/desktop/scripts/soffice.sh
+index 7188f393e..b3f5852bb 100755
+--- a/desktop/scripts/soffice.sh
++++ b/desktop/scripts/soffice.sh
+@@ -53,6 +53,25 @@ cd "$sd_dirname" || exit $?
+ sd_prog=$(pwd)
+ cd "$sd_cwd" || exit $?
+ 
++# Termux/Bionic: unlike glibc, Bionic's dynamic linker resolves weak
++# (vague-linkage) symbols per dlopen group, not process-wide. Every dlopen'd
++# UNO component therefore binds the C++ exception type_info objects
++# (_ZTIN3com3sun4star...) to its own local copy, and because libc++abi
++# matches catch clauses by type_info pointer identity, UNO exceptions thrown
++# in one .so escape every typed catch in another .so (observed as the
++# startup abort / white Start Center window).
++#
++# Preloading libsofficeapp.so force-sets DF_1_GLOBAL on it at load time,
++# which is the ONLY mechanism Bionic honors for placing a library's symbols
++# ahead of a later dlopen group's own copies: on-device tests show that both
++# dlopen(RTLD_GLOBAL) at load time and later RTLD_NOLOAD|RTLD_GLOBAL
++# "promotion" do NOT affect how subsequently loaded libraries bind these
++# symbols, but LD_PRELOAD does. With this, every component binds the
++# exception type_info base chain to libsofficeapp's copies and typed
++# catches match again.
++LD_PRELOAD="$sd_prog/libsofficeapp.so${LD_PRELOAD:+:$LD_PRELOAD}"
++export LD_PRELOAD
++
+ # linked build needs additional settings
+ if [ -e "${sd_prog}/ooenv" ] ; then
+     # shellcheck source=../../instsetoo_native/ooenv
+-- 
+2.55.0
+
