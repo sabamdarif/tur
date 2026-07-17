@@ -1,0 +1,49 @@
+From 7fef53282cc09f0e2c8a4a95ec62270897deaf51 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Fri, 17 Jul 2026 14:00:43 +0530
+Subject: [PATCH] preload sfxlo so cross-component UNO exception catches match
+ on Bionic
+
+libsofficeapp.so does not emit every UNO exception type_info; in
+particular css::container::NoSuchElementException is absent from its
+dynsym, so preloading it (0043) leaves that type un-unified. configmgr
+(dlopen'd) throws NoSuchElementException for missing config keys as
+routine control flow, and the typed catch in libsfxlo
+(sfx2::FileDialogHelper::Execute path) binds a different type_info
+copy, so the catch misses and every GUI save fails with
+'General Error. General input/output error' before the file picker
+appears. Preloading libsfxlo.so makes its exported copy the global
+winner for both throw and catch sites. Verified on device: save
+dialog opens and documents save.
+---
+ desktop/scripts/soffice.sh | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/desktop/scripts/soffice.sh b/desktop/scripts/soffice.sh
+index 11ec1dd32..bf5a5f6b1 100755
+--- a/desktop/scripts/soffice.sh
++++ b/desktop/scripts/soffice.sh
+@@ -78,7 +78,19 @@ cd "$sd_cwd" || exit $?
+ # dynamic_cast<weld::Toolbar*> on a GtkInstanceToolbar returns null and
+ # the sidebar toolbar setup crashes on a null vcl::Window
+ # (ImageOrientationController ctor) as soon as a document opens.
+-LD_PRELOAD="$sd_prog/libsofficeapp.so:$sd_prog/libvclplug_gtk3lo.so${LD_PRELOAD:+:$LD_PRELOAD}"
++#
++# libsfxlo.so must be preloaded as well: preloading only unifies the
++# exception types libsofficeapp itself happens to emit, and
++# css::container::NoSuchElementException is not among them (readelf shows
++# no _ZTIN3com3sun4star9container22NoSuchElementExceptionE in its dynsym).
++# configmgr (dlopen'd UNO component) throws NoSuchElementException for
++# missing config keys as normal control flow; sfx2::FileDialogHelper's
++# typed catch in libsfxlo compares against a different type_info copy and
++# misses, so the exception falls through to a generic handler and every
++# GUI save aborts with "General input/output error" before the file
++# dialog even opens. With libsfxlo preloaded its exported copy wins the
++# global lookup for both the throwing component and the catch site.
++LD_PRELOAD="$sd_prog/libsofficeapp.so:$sd_prog/libvclplug_gtk3lo.so:$sd_prog/libsfxlo.so${LD_PRELOAD:+:$LD_PRELOAD}"
+ export LD_PRELOAD
+ 
+ # linked build needs additional settings
+-- 
+2.55.0
+
