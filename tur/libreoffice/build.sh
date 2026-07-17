@@ -147,7 +147,10 @@ termux_step_pre_configure() {
 	if [ "$TERMUX_ARCH" = "arm" ] || [ "$TERMUX_ARCH" = "i686" ]; then
 		local _libgcc_file="$($CC -print-libgcc-file-name)"
 		export TERMUX_32BIT_BUILTINS="$_libgcc_file"
-		export LDFLAGS="${LDFLAGS:-} $_libgcc_file"
+		# -Wl, prefix: a bare .a path in LDFLAGS makes libtool (used by
+		# autotools externals like coinmp) ar-insert the archive itself
+		# into static convenience archives -> 'not an ELF file' at link.
+		export LDFLAGS="${LDFLAGS:-} -Wl,$_libgcc_file"
 		export CMAKE_SHARED_LINKER_FLAGS="${CMAKE_SHARED_LINKER_FLAGS:-} $_libgcc_file"
 		export CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS:-} $_libgcc_file"
 	fi

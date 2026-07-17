@@ -1,0 +1,28 @@
+From 8820e2eeeeba7fabbe35efe38e5f994fec57e2c0 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Fri, 17 Jul 2026 19:59:23 +0530
+Subject: [PATCH] coinmp: pass 32-bit builtins archive as -Wl, flag so libtool
+ keeps it out of convenience archives
+
+A bare .a path in LDFLAGS is treated by CoinMP's old libtool as a library
+input; when building noinst convenience archives (e.g. libCglAllDifferent.a)
+it ar-inserts the builtins archive file itself as a member, and the later
+libCgl.la shared link fails with 'not an ELF file'. -Wl, makes libtool pass
+it straight to the linker on shared links and drop it from ar archives.
+---
+ external/coinmp/ExternalProject_coinmp.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/external/coinmp/ExternalProject_coinmp.mk b/external/coinmp/ExternalProject_coinmp.mk
+index a800e834a..aae51ac42 100644
+--- a/external/coinmp/ExternalProject_coinmp.mk
++++ b/external/coinmp/ExternalProject_coinmp.mk
+@@ -40,7 +40,7 @@ $(call gb_ExternalProject_get_state_target,coinmp,build) :
+ 			$(if $(filter LINUX ANDROID,$(OS)), \
+ 				'LDFLAGS=-Wl$(COMMA)-z$(COMMA)origin \
+ 					-Wl$(COMMA)-rpath$(COMMA)\$$$$ORIGIN \
+-					$(if $(filter ARM INTEL,$(CPUNAME)),$(TERMUX_32BIT_BUILTINS))') \
++					$(if $(filter ARM INTEL,$(CPUNAME)),-Wl$(COMMA)$(TERMUX_32BIT_BUILTINS))') \
+ 		&& $(MAKE) \
+ 		$(if $(filter MACOSX,$(OS)),&& $(PERL) \
+ 			$(SRCDIR)/solenv/bin/macosx-change-install-names.pl shl OOO \
