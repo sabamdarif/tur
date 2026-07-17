@@ -1,0 +1,85 @@
+From 5d57b3670f33748e163495229312e735828f2342 Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Fri, 17 Jul 2026 17:08:51 +0530
+Subject: [PATCH] drop soffice.sh LD_PRELOAD in favor of linking with -z global
+
+The wrapper preloaded libsofficeapp.so, libvclplug_gtk3lo.so and
+libsfxlo.so because LD_PRELOAD was the only mechanism Bionic honored
+for putting a library's weak vague-linkage symbols (exception
+type_info, dynamic_cast RTTI) ahead of later dlopen groups. That
+approach was whack-a-mole: each preloaded library only unifies the
+type_info copies it happens to export itself.
+
+The package now links every library with -Wl,-z,global, baking
+DF_1_GLOBAL into each .so. Bionic adds DF_1_GLOBAL libraries to the
+global group at load time regardless of how they are loaded, so the
+first-loaded copy of every type_info wins process-wide and typed
+catches and dynamic_casts match across all components in all
+directions. The preload list is redundant with that and is removed.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ desktop/scripts/soffice.sh | 47 +++++++-------------------------------
+ 1 file changed, 8 insertions(+), 39 deletions(-)
+
+diff --git a/desktop/scripts/soffice.sh b/desktop/scripts/soffice.sh
+index bf5a5f6b1..567566dca 100755
+--- a/desktop/scripts/soffice.sh
++++ b/desktop/scripts/soffice.sh
+@@ -53,45 +53,14 @@ cd "$sd_dirname" || exit $?
+ sd_prog=$(pwd)
+ cd "$sd_cwd" || exit $?
+ 
+-# Termux/Bionic: unlike glibc, Bionic's dynamic linker resolves weak
+-# (vague-linkage) symbols per dlopen group, not process-wide. Every dlopen'd
+-# UNO component therefore binds the C++ exception type_info objects
+-# (_ZTIN3com3sun4star...) to its own local copy, and because libc++abi
+-# matches catch clauses by type_info pointer identity, UNO exceptions thrown
+-# in one .so escape every typed catch in another .so (observed as the
+-# startup abort / white Start Center window).
+-#
+-# Preloading libsofficeapp.so force-sets DF_1_GLOBAL on it at load time,
+-# which is the ONLY mechanism Bionic honors for placing a library's symbols
+-# ahead of a later dlopen group's own copies: on-device tests show that both
+-# dlopen(RTLD_GLOBAL) at load time and later RTLD_NOLOAD|RTLD_GLOBAL
+-# "promotion" do NOT affect how subsequently loaded libraries bind these
+-# symbols, but LD_PRELOAD does. With this, every component binds the
+-# exception type_info base chain to libsofficeapp's copies and typed
+-# catches match again.
+-#
+-# libvclplug_gtk3lo.so must be preloaded too: it is dlopen'd as a VCL
+-# plugin (not DT_NEEDED anywhere), so it sits outside libsofficeapp's
+-# startup closure and its weld::* / gtk widget classes get their own local
+-# type_info copies. dynamic_cast also matches by type_info pointer
+-# identity, so e.g. svt::ToolboxController::initialize's
+-# dynamic_cast<weld::Toolbar*> on a GtkInstanceToolbar returns null and
+-# the sidebar toolbar setup crashes on a null vcl::Window
+-# (ImageOrientationController ctor) as soon as a document opens.
+-#
+-# libsfxlo.so must be preloaded as well: preloading only unifies the
+-# exception types libsofficeapp itself happens to emit, and
+-# css::container::NoSuchElementException is not among them (readelf shows
+-# no _ZTIN3com3sun4star9container22NoSuchElementExceptionE in its dynsym).
+-# configmgr (dlopen'd UNO component) throws NoSuchElementException for
+-# missing config keys as normal control flow; sfx2::FileDialogHelper's
+-# typed catch in libsfxlo compares against a different type_info copy and
+-# misses, so the exception falls through to a generic handler and every
+-# GUI save aborts with "General input/output error" before the file
+-# dialog even opens. With libsfxlo preloaded its exported copy wins the
+-# global lookup for both the throwing component and the catch site.
+-LD_PRELOAD="$sd_prog/libsofficeapp.so:$sd_prog/libvclplug_gtk3lo.so:$sd_prog/libsfxlo.so${LD_PRELOAD:+:$LD_PRELOAD}"
+-export LD_PRELOAD
++# Termux/Bionic: every LibreOffice library is linked with -Wl,-z,global
++# (DF_1_GLOBAL, see the package build.sh), which puts each library in the
++# dynamic linker's global group as it loads. That unifies the weak
++# vague-linkage symbols (exception type_info, RTTI used by dynamic_cast)
++# process-wide, which Bionic otherwise resolves per dlopen group, so
++# cross-.so typed catches and dynamic_casts match again. This replaces the
++# earlier LD_PRELOAD of libsofficeapp/libvclplug_gtk3lo/libsfxlo, which
++# only unified the types those three libraries happened to export.
+ 
+ # linked build needs additional settings
+ if [ -e "${sd_prog}/ooenv" ] ; then
+-- 
+2.55.0
+

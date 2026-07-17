@@ -3,7 +3,7 @@ TERMUX_PKG_DESCRIPTION="Free cross-platform office suite, fresh version"
 TERMUX_PKG_LICENSE="MPL-2.0, LGPL-3.0"
 TERMUX_PKG_MAINTAINER="@termux"
 TERMUX_PKG_VERSION=26.2.0.3
-TERMUX_PKG_REVISION=12
+TERMUX_PKG_REVISION=13
 TERMUX_PKG_SRCURL=https://download.documentfoundation.org/libreoffice/src/${TERMUX_PKG_VERSION%.*}/libreoffice-$TERMUX_PKG_VERSION.tar.xz
 TERMUX_PKG_SHA256=5b80ec8ed6726479e0f033c08c38f9df36fa20b15c575378d75ba0c373f15416
 # Ref: https://gitlab.archlinux.org/archlinux/packaging/packages/libreoffice-fresh/-/blob/main/PKGBUILD?ref_type=heads
@@ -127,11 +127,19 @@ termux_step_pre_configure() {
 	# libstdc++ ABI symbols absent with libc++). Downgrade to warnings.
 	export LDFLAGS="${LDFLAGS} -Wl,--undefined-version"
 
-	# cross-.so exception RTTI is unified via LD_PRELOAD of
-	# libsofficeapp.so in the soffice wrapper (patch 0043). If exception
-	# types thrown/caught between two dlopen'd components ever misbehave,
-	# the broader fix is linking everything with -Wl,-z,global
-	# (DF_1_GLOBAL baked into each lib) — untested, needs a full rebuild.
+	# Bionic resolves weak vague-linkage symbols (C++ exception type_info,
+	# dynamic_cast RTTI) per dlopen group, so typed catches/casts across
+	# dlopen'd UNO components miss. Only members of the linker's global
+	# group interpose ahead of later dlopen groups, and Bionic ignores
+	# dlopen(RTLD_GLOBAL) for that purpose (proven on-device, see patch
+	# 0043). DF_1_GLOBAL baked into every .so via -z global puts each lib
+	# in the global group at load time: first-loaded copy of every
+	# type_info wins process-wide, unifying RTTI in all directions.
+	# Replaces the LD_PRELOAD list the soffice wrapper carried (patches
+	# 0043/0045/0047; removed again by 0049 now that every lib gets
+	# DF_1_GLOBAL at link time). Verify after build:
+	#   readelf -d libsclo.so | grep FLAGS_1   -> must show GLOBAL
+	export LDFLAGS="${LDFLAGS} -Wl,-z,global"
 
 	# 32-bit arches: CoinMP libraries need compiler-rt builtins from libgcc
 	# (ARM: __aeabi_* division helpers; x86: __divdi3/__moddi3 for 64-bit division).
@@ -202,8 +210,13 @@ termux_step_post_massage() {
 	# on Termux because the deployment infrastructure (shared extension repos,
 	# cached registry ini files) doesn't exist on a fresh install. Since there
 	# are no bundled extensions in the Termux package, this sync is a no-op
-	# anyway. LibreOffice has a built-in escape hatch via this bootstrap variable.
-	echo "" >> lib/libreoffice/program/unorc
-	echo "# Termux: disable extension sync on startup (no bundled extensions)" >> lib/libreoffice/program/unorc
-	echo "DISABLE_EXTENSION_SYNCHRONIZATION=1" >> lib/libreoffice/program/unorc
+	# anyway. LibreOffice has a built-in escape hatch via this bootstrap
+	# variable (dp_misc.cxx syncRepositories). It must go in fundamentalrc:
+	# plain rtl::Bootstrap::get() only consults sofficerc, then fundamentalrc
+	# (URE_BOOTSTRAP fallback), then the environment — never unorc.
+	# Currently moot while patch 0029 compile-time-skips the sync on Android;
+	# takes effect when 0029 is peeled back after the -z global rebuild.
+	echo "" >> lib/libreoffice/program/fundamentalrc
+	echo "# Termux: disable extension sync on startup (no bundled extensions)" >> lib/libreoffice/program/fundamentalrc
+	echo "DISABLE_EXTENSION_SYNCHRONIZATION=1" >> lib/libreoffice/program/fundamentalrc
 }
