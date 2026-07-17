@@ -1,0 +1,49 @@
+From f4d239f061b9b8eb9d4ab7f3d59d96b12444a60d Mon Sep 17 00:00:00 2001
+From: Md Arif <111168803+sabamdarif@users.noreply.github.com>
+Date: Fri, 17 Jul 2026 12:30:50 +0530
+Subject: [PATCH] 0045-preload-gtk3-vclplug-for-bionic-rtti-dynamic-cast
+
+The gtk3 VCL plugin is dlopen'd (never DT_NEEDED), so Bionic gives its
+weak vague-linkage weld::*/Gtk* type_info symbols local copies even with
+libsofficeapp.so preloaded. dynamic_cast matches type_info by pointer
+identity on libc++abi, so casts in startup-closure libs against objects
+constructed in the plugin fail: svt::ToolboxController::initialize's
+dynamic_cast<weld::Toolbar*>(TransportAsXWindow::getWidget()) returned
+null, leaving m_pToolbar unset (release build compiles out the assert),
+and framework::ImageOrientationController's ctor then dereferenced the
+null VCLUnoHelper::GetWindow(getParent()) result in the !m_pToolbar
+fallback -> SIGSEGV (null + 0x8, vcl::Window::AddEventListener) during
+sidebar creation ~1s after opening any document.
+
+Fix: add libvclplug_gtk3lo.so to the LD_PRELOAD set in soffice.sh so the
+plugin joins the startup global group and its RTTI unifies with the rest.
+Verified on device: Calc opens, sidebar renders, no crash.
+---
+ desktop/scripts/soffice.sh | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/desktop/scripts/soffice.sh b/desktop/scripts/soffice.sh
+index b3f5852bb..11ec1dd32 100755
+--- a/desktop/scripts/soffice.sh
++++ b/desktop/scripts/soffice.sh
+@@ -69,7 +69,16 @@ cd "$sd_cwd" || exit $?
+ # symbols, but LD_PRELOAD does. With this, every component binds the
+ # exception type_info base chain to libsofficeapp's copies and typed
+ # catches match again.
+-LD_PRELOAD="$sd_prog/libsofficeapp.so${LD_PRELOAD:+:$LD_PRELOAD}"
++#
++# libvclplug_gtk3lo.so must be preloaded too: it is dlopen'd as a VCL
++# plugin (not DT_NEEDED anywhere), so it sits outside libsofficeapp's
++# startup closure and its weld::* / gtk widget classes get their own local
++# type_info copies. dynamic_cast also matches by type_info pointer
++# identity, so e.g. svt::ToolboxController::initialize's
++# dynamic_cast<weld::Toolbar*> on a GtkInstanceToolbar returns null and
++# the sidebar toolbar setup crashes on a null vcl::Window
++# (ImageOrientationController ctor) as soon as a document opens.
++LD_PRELOAD="$sd_prog/libsofficeapp.so:$sd_prog/libvclplug_gtk3lo.so${LD_PRELOAD:+:$LD_PRELOAD}"
+ export LD_PRELOAD
+ 
+ # linked build needs additional settings
+-- 
+2.55.0
+
